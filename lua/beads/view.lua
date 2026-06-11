@@ -272,6 +272,54 @@ local handlers = {
       end)
     end,
   },
+  assign = {
+    desc = "assign issue",
+    fn = function()
+      if not state.issue then
+        return
+      end
+      local id = state.issue.id
+      vim.ui.input(
+        {
+          prompt = "Assignee for " .. id .. " (empty = unassign): ",
+          default = state.issue.assignee or "",
+        },
+        function(name)
+          if name == nil then
+            return
+          end
+          name = vim.trim(name)
+          local msg = name == "" and ("unassigned " .. id) or (id .. " → " .. name)
+          update_and_rerender({ "assign", id, name }, msg, "assign")
+        end
+      )
+    end,
+  },
+  defer = {
+    desc = "defer / undefer",
+    fn = function()
+      if not state.issue then
+        return
+      end
+      local id = state.issue.id
+      if state.issue.status == "deferred" then
+        update_and_rerender({ "undefer", id }, "undeferred " .. id, "undefer")
+        return
+      end
+      vim.ui.input({ prompt = "Defer " .. id .. " until (empty = no date): " }, function(expr)
+        if expr == nil then
+          return
+        end
+        expr = vim.trim(expr)
+        local args = { "defer", id }
+        if expr ~= "" then
+          table.insert(args, "--until=" .. expr)
+        end
+        local msg = expr == "" and ("deferred " .. id) or ("deferred " .. id .. " until " .. expr)
+        update_and_rerender(args, msg, "defer")
+      end)
+    end,
+  },
   close = {
     desc = "close issue",
     fn = function()

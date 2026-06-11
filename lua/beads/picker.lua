@@ -321,7 +321,9 @@ function M._open_picker(all_issues, filters, source, picker_opts)
           refresh(prompt_bufnr)
         end)
 
-        map_action(map, m.refetch, function()
+        -- Refetch from bd and re-render in place (shared by refetch + writes
+        -- like defer that need fresh status afterward).
+        local function reload()
           local fetch_args = source == "ready" and { "ready" }
             or issues.build_list_args({ all = true, limit = config.get().list_limit })
           cli.run_json(fetch_args, function(ok, raw)
@@ -335,6 +337,44 @@ function M._open_picker(all_issues, filters, source, picker_opts)
             preview_cache = {}
             refresh(prompt_bufnr)
           end)
+        end
+
+        map_action(map, m.refetch, reload)
+
+        -- Defer / undefer the selected issue (toggles on its current status),
+        -- then reload so the new status/icon shows.
+        map_action(map, m.defer, function()
+          local entry = action_state.get_selected_entry()
+          if not entry then
+            return
+          end
+          local issue = entry.value
+          if issue.status == "deferred" then
+            cli.run_plain({ "undefer", issue.id }, function(ok)
+              if ok then
+                reload()
+              end
+            end)
+            return
+          end
+          vim.ui.input(
+            { prompt = "Defer " .. issue.id .. " until (empty = no date): " },
+            function(expr)
+              if expr == nil then
+                return
+              end
+              expr = vim.trim(expr)
+              local args = { "defer", issue.id }
+              if expr ~= "" then
+                table.insert(args, "--until=" .. expr)
+              end
+              cli.run_plain(args, function(ok)
+                if ok then
+                  reload()
+                end
+              end)
+            end
+          )
         end)
 
         return true
