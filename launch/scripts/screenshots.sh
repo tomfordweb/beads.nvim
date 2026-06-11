@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Capture the 5 static launch PNGs by driving beads.nvim to each money-shot
-# state and rendering the pane's ANSI with charmbracelet/freeze. One seeded
+# state and rendering the pane's ANSI with charmbeads/freeze. One seeded
 # demo DB, one nvim, navigated between shots. No GUI display needed.
 #
 #   launch/scripts/screenshots.sh
