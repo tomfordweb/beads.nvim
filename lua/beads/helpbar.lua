@@ -50,6 +50,7 @@ M.PANES = {
     { action = "close", label = "close" },
     { action = "reopen", label = "reopen" },
     { action = "graph", label = "graph" },
+    { action = "history", label = "history" },
     { action = "jump", label = "dep-jump" },
     { action = "sidebar", label = "links" },
     { action = "back", label = "back" },

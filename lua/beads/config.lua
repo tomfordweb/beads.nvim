@@ -65,6 +65,7 @@ local defaults = {
       close = "c",
       reopen = "o",
       graph = "D",
+      history = "H",
       jump = { "gd", "<CR>" },
       back = "<BS>",
       refresh = "R",

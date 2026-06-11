@@ -279,20 +279,17 @@ local handlers = {
         return
       end
       local id = state.issue.id
-      vim.ui.input(
-        {
-          prompt = "Assignee for " .. id .. " (empty = unassign): ",
-          default = state.issue.assignee or "",
-        },
-        function(name)
-          if name == nil then
-            return
-          end
-          name = vim.trim(name)
-          local msg = name == "" and ("unassigned " .. id) or (id .. " → " .. name)
-          update_and_rerender({ "assign", id, name }, msg, "assign")
+      vim.ui.input({
+        prompt = "Assignee for " .. id .. " (empty = unassign): ",
+        default = state.issue.assignee or "",
+      }, function(name)
+        if name == nil then
+          return
         end
-      )
+        name = vim.trim(name)
+        local msg = name == "" and ("unassigned " .. id) or (id .. " → " .. name)
+        update_and_rerender({ "assign", id, name }, msg, "assign")
+      end)
     end,
   },
   defer = {
@@ -423,6 +420,14 @@ local handlers = {
     fn = function()
       if state.issue then
         require("beads.graphview").open(state.issue.id)
+      end
+    end,
+  },
+  history = {
+    desc = "change history",
+    fn = function()
+      if state.issue then
+        require("beads.history").open(state.issue.id)
       end
     end,
   },
