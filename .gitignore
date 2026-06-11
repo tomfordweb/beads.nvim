@@ -7,3 +7,8 @@
 # Live beads working data — never publish personal tracking.
 # Tests use synthetic fixtures under tests/fixtures/ instead.
 /.beads/
+
+# mkdocs build inputs/outputs. docs/ is generated from README.md in CI
+# (single-source); the committed vim help lives in doc/ (singular).
+/docs/
+/site/

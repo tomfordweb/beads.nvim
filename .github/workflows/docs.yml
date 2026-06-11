@@ -1,0 +1,94 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Pages deploy needs these; harmless on PRs (deploy job is gated to main).
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Generate :help beads from README.md (single source) via panvimdoc.
+  # On PRs: fail if the committed doc/beads.txt is stale.
+  # On main: regenerate and commit any change.
+  vimdoc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate vimdoc
+        uses: kdheepak/panvimdoc@main
+        with:
+          vimdoc: beads
+          input: README.md
+          description: "Neovim UI for Beads — the bd issue tracker"
+          titledatepattern: "%Y"
+          demojify: true
+          treesitter: true
+
+      - name: Fail on stale doc (pull requests)
+        if: github.event_name == 'pull_request'
+        run: |
+          if ! git diff --quiet -- doc/beads.txt; then
+            echo "::error::doc/beads.txt is out of date — run panvimdoc and commit the result."
+            git diff -- doc/beads.txt
+            exit 1
+          fi
+
+      - name: Commit regenerated doc (main)
+        if: github.event_name == 'push'
+        run: |
+          if ! git diff --quiet -- doc/beads.txt; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add doc/beads.txt
+            git commit -m "docs: regenerate doc/beads.txt [skip ci]"
+            git push
+          fi
+
+  # Build + deploy the GitHub Pages site (mkdocs-material) from the same
+  # README source. Only deploys on push to main.
+  pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install mkdocs-material
+        run: pip install mkdocs-material
+
+      - name: Stage README as the docs index (single source)
+        run: |
+          mkdir -p docs
+          cp README.md docs/index.md
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: pages
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

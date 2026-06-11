@@ -1,11 +1,11 @@
 # beads.nvim
 
-Neovim UI for [beads](https://github.com/steveyegge/beads) (`bd`) — the issue
+Neovim UI for [Beads](https://github.com/gastownhall/beads) (`bd`) — the issue
 tracker with first-class dependency support. Browse and filter issues in
 Telescope, view and edit them in a floating detail view, and navigate
 dependency chains without leaving the editor.
 
-Tested against bd 1.0.4. This project tracks its own issues with bd.
+Tested against bd 1.0.4. This project tracks its own issues with Beads.
 
 ## Features
 
@@ -46,7 +46,7 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
 ## Requirements
 
 - Neovim ≥ 0.10 (`vim.system`)
-- [bd](https://github.com/steveyegge/beads) on `$PATH`
+- [Beads](https://github.com/gastownhall/beads) (`bd`) on `$PATH`
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   (+ plenary)
 

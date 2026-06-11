@@ -1,0 +1,42 @@
+site_name: Beads
+site_description: Neovim UI for Beads — the bd issue tracker with first-class dependency support
+site_url: https://tomfordweb.github.io/beads.nvim/
+repo_url: https://github.com/tomfordweb/beads.nvim
+repo_name: tomfordweb/beads.nvim
+
+# The site is built from README.md, copied to docs/index.md by the docs
+# workflow so the Markdown stays single-source. docs/ itself is gitignored.
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.top
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
