@@ -29,7 +29,7 @@ jobs:
         with:
           vimdoc: beads
           input: README.md
-          description: "Neovim UI for Beads — the bd issue tracker"
+          description: "Neovim UI for the bd issue tracker"
           titledatepattern: "%Y"
           demojify: true
           treesitter: true
@@ -65,8 +65,8 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install mkdocs-material
-        run: pip install mkdocs-material
+      - name: Install mkdocs
+        run: pip install mkdocs
 
       - name: Stage README as the docs index (single source)
         run: |
