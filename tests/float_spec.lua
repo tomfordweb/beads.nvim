@@ -65,14 +65,22 @@ describe("beads.float.width/height", function()
 end)
 
 describe("beads.float.auto_resize", function()
-  it("reapplies geometry on VimResized and detaches on close", function()
+  local config = require("beads.config")
+  after_each(function()
+    config.setup({})
+  end)
+
+  local function tracked_win()
     local buf = vim.api.nvim_create_buf(false, true)
-    local win = vim.api.nvim_open_win(
+    return vim.api.nvim_open_win(
       buf,
       false,
       vim.tbl_extend("force", float.center(30, 5), { border = "single" })
     )
+  end
 
+  it("reapplies geometry on VimResized and detaches on close", function()
+    local win = tracked_win()
     local calls = 0
     float.auto_resize(win, function()
       calls = calls + 1
@@ -86,5 +94,35 @@ describe("beads.float.auto_resize", function()
     vim.api.nvim_win_close(win, true)
     vim.cmd("doautocmd VimResized")
     assert.equals(1, calls)
+  end)
+
+  it("reapplies geometry on focus-resume events (M2)", function()
+    local win = tracked_win()
+    local calls = 0
+    float.auto_resize(win, function()
+      calls = calls + 1
+      return float.center(30, 5)
+    end)
+
+    vim.api.nvim_exec_autocmds("FocusGained", {})
+    vim.api.nvim_exec_autocmds("VimResume", {})
+    assert.equals(2, calls)
+    vim.api.nvim_win_close(win, true)
+  end)
+
+  it("skips focus events when refresh_on_focus=false but keeps VimResized", function()
+    config.setup({ refresh_on_focus = false })
+    local win = tracked_win()
+    local calls = 0
+    float.auto_resize(win, function()
+      calls = calls + 1
+      return float.center(30, 5)
+    end)
+
+    vim.api.nvim_exec_autocmds("FocusGained", {})
+    assert.equals(0, calls) -- focus ignored
+    vim.cmd("doautocmd VimResized")
+    assert.equals(1, calls) -- resize still honored
+    vim.api.nvim_win_close(win, true)
   end)
 end)

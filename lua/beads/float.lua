@@ -117,18 +117,39 @@ function M.apply_highlights(buf, ns_name, hls)
   end
 end
 
---- Re-apply geometry from `recompute` on every VimResized until the
---- window closes.
+--- Re-apply geometry from `recompute` until the window closes. Tracks
+--- VimResized plus the focus-resume events (FocusGained, VimResume) because a
+--- tmux reattach or pane-zoom frequently reports those instead of VimResized,
+--- which left floats stale (M2). The focus events are opt-out via
+--- `refresh_on_focus`; VimResized always applies. Each event is logged through
+--- util.debug when `debug = true`.
 ---@param win integer
 ---@param recompute fun(): table window config fragment
 function M.auto_resize(win, recompute)
   local group = vim.api.nvim_create_augroup("beads_float_resize_" .. win, { clear = true })
-  vim.api.nvim_create_autocmd("VimResized", {
+  local apply = function(event)
+    if not vim.api.nvim_win_is_valid(win) then
+      return
+    end
+    if event ~= "VimResized" and not require("beads.config").get().refresh_on_focus then
+      return
+    end
+    local cfg = recompute()
+    vim.api.nvim_win_set_config(win, cfg)
+    require("beads.util").debug(
+      ("%s -> float %sx%s (editor %dx%d)"):format(
+        event,
+        tostring(cfg.width or "?"),
+        tostring(cfg.height or "?"),
+        vim.o.columns,
+        vim.o.lines
+      )
+    )
+  end
+  vim.api.nvim_create_autocmd({ "VimResized", "FocusGained", "VimResume" }, {
     group = group,
-    callback = function()
-      if vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_win_set_config(win, recompute())
-      end
+    callback = function(args)
+      apply(args.event)
     end,
   })
   vim.api.nvim_create_autocmd("WinClosed", {

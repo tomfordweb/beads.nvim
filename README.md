@@ -153,6 +153,8 @@ require("beads").setup({
 
   helpbar = true,           -- false: no keybind footers / prompt-title help
   notify = true,            -- false: silence success messages (errors always shown)
+  refresh_on_focus = true,  -- re-center floats on tmux reattach/zoom (focus events)
+  debug = false,            -- log float resize/focus events via vim.notify(DEBUG)
   palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
 })
 ```
@@ -200,6 +202,21 @@ vim.api.nvim_create_autocmd("User", {
 })
 -- also: BeadsMemoryUpdated — data = { key, action = "remember"|"forget" }
 ```
+
+### tmux
+
+Floats re-center on terminal resize and on focus-resume (tmux reattach or
+pane-zoom, which often report `FocusGained`/`VimResume` rather than
+`VimResized`). For the focus events to reach Neovim, enable focus reporting in
+`~/.tmux.conf`:
+
+```tmux
+set -g focus-events on
+set -g set-clipboard on   # also lets yanks reach the system clipboard (OSC52)
+```
+
+Set `refresh_on_focus = false` to track resize only, or `debug = true` to log
+each resize/focus event (`:messages`) when diagnosing layout glitches.
 
 ### Statuses and types
 

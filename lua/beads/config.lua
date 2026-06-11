@@ -26,6 +26,8 @@
 ---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[] }
 ---@field helpbar boolean
 ---@field notify boolean
+---@field refresh_on_focus boolean
+---@field debug boolean
 ---@field palette { extra: table[] }
 ---@field runner fun(argv: string[], opts: table, on_exit: fun(out: table))|nil
 
@@ -137,6 +139,12 @@ local defaults = {
   },
   helpbar = true,
   notify = true,
+  -- Re-center/resize open floats on terminal focus-resume as well as resize.
+  -- tmux reattach and pane-zoom often fire FocusGained/VimResume instead of
+  -- VimResized; set false to only track VimResized. Requires tmux
+  -- `set -g focus-events on` for the focus events to reach nvim.
+  refresh_on_focus = true,
+  debug = false, -- log float resize/focus events via vim.notify(DEBUG)
   palette = { extra = {} },
   runner = nil,
 }
