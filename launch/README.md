@@ -17,6 +17,7 @@ once-over).
 | [`discussion-276-comment.md`](discussion-276-comment.md) | official | Comment scaffold for Beads Discussion #276 "Beads UI — make your pick". |
 | [`community-tools-pr.md`](community-tools-pr.md) | official | Exact entry + PR text for `gastownhall/beads` `docs/COMMUNITY_TOOLS.md`. |
 | [`awesome-neovim-entry.md`](awesome-neovim-entry.md) | official | Exact entry + PR text for `rockerBOO/awesome-neovim`, plus GitHub topics for dotfyle. |
+| `scripts/` | assets | Automated capture: `record.sh` (GIFs) + `screenshots.sh` (PNGs) drive the real UI against the demo fixture. See `blurb.md` → "Asset capture". |
 
 ## Sequencing (do not skip)
 

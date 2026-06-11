@@ -12,3 +12,7 @@
 # (single-source); the committed vim help lives in doc/ (singular).
 /docs/
 /site/
+
+# Raw asciinema casts are large and regenerable (launch/scripts/record.sh);
+# only the curated GIFs/PNGs under launch/assets/ are tracked.
+/launch/casts/

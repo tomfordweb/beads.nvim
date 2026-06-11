@@ -59,10 +59,33 @@ Pull a subset per platform; don't reword between posts.
 
 ---
 
-## Asset shot list  *(capture is an owner action — needs a real terminal)*
+## Asset capture — automated
 
-Record once, reuse across every post. Use the synthetic demo fixture
-(`tests/fixtures/demo/`, the `acme-web` data) so nothing personal is on screen.
+`launch/scripts/record.sh` drives the real plugin UI with `tmux send-keys`
+against a throwaway demo `bd` DB (seeded from `tests/fixtures/demo/`) while
+asciinema records, then `agg` makes a GIF. Each journey self-verifies via
+`tmux capture-pane` checkpoints. Nothing personal is ever on screen.
+
+```sh
+# requires: tmux, nvim, bd, asciinema, agg (+ dressing.nvim for tidy prompts)
+launch/scripts/record.sh                 # 3 GIFs -> launch/assets/{triage,deps,epic}.gif
+launch/scripts/screenshots.sh            # 5 PNGs (needs freeze; ffmpeg fallback)
+
+WATCH=1 launch/scripts/record.sh         # watch it drive live in a split (preview)
+REC_COLS=120 REC_LINES=36 launch/scripts/record.sh   # geometry (detached = clean asset)
+SLEEP=1.4 launch/scripts/record.sh       # slower pacing on a busy box
+```
+
+Notes:
+- Detached width is bounded by the tmux client; journeys stay consistent with
+  each other. Float size is a config percentage (see `float` in the README) —
+  `capture-init.lua` sets it to 90% so the floats fill the frame.
+- Output GIFs/PNGs land in `launch/assets/` (tracked). Raw `.cast` files go to
+  `launch/casts/` (gitignored, regenerable).
+
+### Shot list (what the scripts produce)
+
+Record once, reuse across every post. The `acme-web` demo fixture drives them.
 
 **Screenshots (PNG, light + dark if easy):**
 1. Issue browser — picker open with a filter chip active (e.g. `status:open`).
