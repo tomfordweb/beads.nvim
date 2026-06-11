@@ -98,10 +98,14 @@ local function set_content(issue, comments, children)
   state.issue = issue
   local lines, hls = render.detail_lines(issue, comments, children)
 
+  -- filetype before content so treesitter/syntax parses from the first render;
+  -- set only when it changes since set_content re-runs on every refresh (M6).
+  if vim.bo[state.buf].filetype ~= "markdown" then
+    vim.bo[state.buf].filetype = "markdown"
+  end
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
-  vim.bo[state.buf].filetype = "markdown"
   float.apply_highlights(state.buf, "beads_view", hls)
 
   if is_open() then

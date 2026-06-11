@@ -75,6 +75,13 @@ describe("beads.inline_edit", function()
     assert.are.same({ "line one", "line two" }, vim.api.nvim_buf_get_lines(cur, 0, -1, false))
   end)
 
+  it("sets filetype=markdown on the edit buffer (M6)", function()
+    local ctx = make_ctx({ id = "beads_nvim-x9s", title = "T", description = "x" })
+    inline.enter(ctx)
+    local cur = vim.api.nvim_win_get_buf(ctx.win)
+    assert.equals("markdown", vim.bo[cur].filetype)
+  end)
+
   it("persists the edited body through bd update on :w (M5)", function()
     local ctx = make_ctx({ id = "beads_nvim-x9s", title = "T", description = "old" })
     inline.enter(ctx)

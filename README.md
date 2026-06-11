@@ -61,6 +61,11 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
 - [beads](https://github.com/gastownhall/beads) (`bd`) on `$PATH`
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   (+ plenary)
+- Optional: [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
+  with the `markdown` parser — the detail and description-edit buffers set
+  `filetype=markdown`, so installing it gives richer syntax highlighting and
+  lets your markdown autoformatters run on `:w`. The plugin works fully without
+  it (it ships its own `Beads*` highlights).
 
 ## Installation (lazy.nvim)
 
