@@ -108,11 +108,11 @@ describe("render.detail_lines", function()
   it("renders comments section with author, date, and indented body", function()
     local issue = issues.normalize(fixtures.show_issue)
     local comments = {
-      { author = "Tom Ford", text = "first\nsecond", created_at = "2026-06-11T13:00:37Z" },
+      { author = "Demo User", text = "first\nsecond", created_at = "2026-06-11T13:00:37Z" },
     }
     local lines = render.detail_lines(issue, comments)
     assert.is_truthy(find_line(lines, "^## Comments %(1%)"))
-    assert.is_truthy(find_line(lines, "Tom Ford — 2026%-06%-11"))
+    assert.is_truthy(find_line(lines, "Demo User — 2026%-06%-11"))
     assert.is_truthy(find_line(lines, "^  first$"))
     assert.is_truthy(find_line(lines, "^  second$"))
   end)

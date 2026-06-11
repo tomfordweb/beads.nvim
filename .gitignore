@@ -3,3 +3,7 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Live beads working data — never publish personal tracking.
+# Tests use synthetic fixtures under tests/fixtures/ instead.
+/.beads/
