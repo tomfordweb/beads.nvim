@@ -11,5 +11,11 @@ return telescope.register_extension({
     ready = function(opts)
       require("beads.picker").open(vim.tbl_extend("force", opts or {}, { source = "ready" }))
     end,
+    search = function(opts)
+      require("beads.picker").search(opts)
+    end,
+    memories = function()
+      require("beads.memories").open()
+    end,
   },
 })

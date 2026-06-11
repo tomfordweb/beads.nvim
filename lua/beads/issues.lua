@@ -45,6 +45,19 @@ function M.match_issue_id(word)
   return word:match("([%a][%w_-]*%-%w+)")
 end
 
+--- Build argv tail for `bd search`.
+---@param prompt string
+---@param opts { all: boolean|nil }|nil
+---@return string[]
+function M.build_search_args(prompt, opts)
+  local args = { "search", prompt }
+  if opts and opts.all then
+    table.insert(args, "--status")
+    table.insert(args, "all")
+  end
+  return args
+end
+
 --- Build argv tail for `bd list`.
 ---@param filters { status: string|nil, priority: integer|nil, type: string|nil, all: boolean|nil, limit: integer|nil }
 ---@return string[]

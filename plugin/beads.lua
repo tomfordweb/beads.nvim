@@ -30,3 +30,21 @@ end, { nargs = "?", desc = "Beads: quick capture" })
 cmd("BeadsPalette", function()
   require("beads.palette").open()
 end, { desc = "Beads: command palette" })
+
+cmd("BeadsMemories", function()
+  require("beads.memories").open()
+end, { desc = "Beads: browse memories" })
+
+cmd("BeadsSearch", function(o)
+  require("beads.picker").search({ default_text = o.args ~= "" and o.args or nil })
+end, { nargs = "?", desc = "Beads: live search (bd search)" })
+
+cmd("BeadsGraph", function(o)
+  local issues = require("beads.issues")
+  local id = o.args ~= "" and o.args or issues.match_issue_id(vim.fn.expand("<cWORD>"))
+  if id then
+    require("beads.graphview").open(id)
+  else
+    vim.notify("BeadsGraph: no issue id given or under cursor", vim.log.levels.WARN)
+  end
+end, { nargs = "?", desc = "Beads: dependency graph" })

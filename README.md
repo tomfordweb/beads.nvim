@@ -29,6 +29,15 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
   terminal size changes (tmux pane resize or zoom).
 - **Link styling** — jumpable dependency ids render underlined
   (`BeadsLink`, default-linked to `Underlined`).
+- **Comments** — issue comments render in the detail view; `a` adds one
+  (`bd comment --stdin`).
+- **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
+  shows `bd graph --compact` in a float; ids are links, `gd` opens them.
+- **Live search** — `:BeadsSearch` re-queries `bd search` per keystroke,
+  covering description text the cached picker can't; `<C-a>` includes
+  closed issues.
+- **Memories** — `:BeadsMemories` browses the bd memory store; `<CR>` edits
+  in a float (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
 
 ## Requirements
 
@@ -86,6 +95,9 @@ keymaps = {
     c = "create",      -- interactive create form
     q = "quick",       -- quick capture (bd q)
     p = "palette",     -- command palette
+    m = "memories",    -- memory browser
+    s = "search",      -- live bd search
+    g = "graph",       -- dependency graph (id under cursor, else prompts)
   },
 }
 ```
@@ -105,13 +117,15 @@ keymaps = {
 ```
 
 Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
-`closed`, `ready`, `create`, `quick`, `palette`.
+`closed`, `ready`, `create`, `quick`, `palette`, `memories`, `search`,
+`graph`.
 
 ## Usage
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
-`:BeadsQuick [title]`, `:BeadsPalette`. Also `:Telescope beads beads` /
-`:Telescope beads ready`.
+`:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`,
+`:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
+beads|ready|search|memories`.
 
 ### Picker mappings
 
@@ -130,11 +144,22 @@ Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 |-----|--------|
 | `e` | edit description (`:w` saves) |
 | `s` / `p` | set status / priority |
+| `a` | add a comment |
 | `c` / `o` | close / reopen |
+| `D` | dependency graph float |
 | `gd` or `<CR>` | jump to dependency under cursor |
 | `<BS>` | back through jump history, then back to the picker |
 | `R` | refresh |
 | `q` / `<Esc>` | close (returns to the picker when opened from it) |
+
+### Memories picker mappings
+
+| Key | Action |
+|-----|--------|
+| `<CR>` | edit memory in a float (`:w` → `bd remember`) |
+| `<C-n>` | new memory (prompts for key) |
+| `<C-d>` | forget memory (confirms) |
+| `<C-r>` | refetch |
 
 ## Tests
 

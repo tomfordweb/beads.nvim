@@ -78,6 +78,41 @@ describe("integration (real bd)", function()
     assert.equals("open", issues.normalize(shown[1]).status)
   end)
 
+  it("memories round-trip: remember, list, recall, forget", function()
+    local memories = require("beads.memories")
+
+    assert.is_true(cli.run_sync({ "remember", "integration memory body", "--key", "int-mem" }))
+
+    local ok, raw = cli.run_sync({ "memories" }, { json = true })
+    assert.is_true(ok)
+    local list = memories.normalize(raw)
+    assert.equals(1, #list)
+    assert.equals("int-mem", list[1].key)
+    assert.equals("integration memory body", list[1].value)
+
+    local rok, recalled = cli.run_sync({ "recall", "int-mem" }, { json = true })
+    assert.is_true(rok)
+    assert.equals("integration memory body", recalled.value)
+
+    assert.is_true(cli.run_sync({ "forget", "int-mem" }))
+    local _, after = cli.run_sync({ "memories" }, { json = true })
+    assert.are.same({}, memories.normalize(after))
+  end)
+
+  it("comment round-trip via stdin", function()
+    local _, out = cli.run_sync({ "q", "commented issue" })
+    local id = vim.trim(out)
+
+    assert.is_true(cli.run_sync({ "comment", id, "--stdin" }, { input = "a comment\nwith two lines" }))
+
+    local ok, comments = cli.run_sync({ "comments", id }, { json = true })
+    assert.is_true(ok)
+    assert.equals(1, #comments)
+    assert.equals("a comment\nwith two lines", comments[1].text)
+    assert.is_string(comments[1].author)
+    assert.is_string(comments[1].created_at)
+  end)
+
   it("cleans up the throwaway database", function()
     config.setup({})
     vim.fn.delete(dir, "rf")

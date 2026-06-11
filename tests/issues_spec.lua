@@ -87,6 +87,16 @@ describe("issues.normalize", function()
   end)
 end)
 
+describe("issues.build_search_args", function()
+  it("builds plain search args", function()
+    assert.are.same({ "search", "auth bug" }, issues.build_search_args("auth bug"))
+  end)
+
+  it("appends --status all when requested", function()
+    assert.are.same({ "search", "x", "--status", "all" }, issues.build_search_args("x", { all = true }))
+  end)
+end)
+
 describe("issues.match_issue_id", function()
   it("matches numeric-suffix ids", function()
     assert.equals("bd-15", issues.match_issue_id("bd-15"))

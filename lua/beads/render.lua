@@ -69,8 +69,9 @@ end
 --- Render a full issue (from `bd show --json`) into buffer lines plus
 --- extmark highlight specs ({lnum, col_start, col_end, hl_group}, 0-indexed).
 ---@param issue table normalized issue
+---@param comments { author: string|nil, text: string|nil, created_at: string|nil }[]|nil
 ---@return string[] lines, table[] highlights
-function M.detail_lines(issue)
+function M.detail_lines(issue, comments)
   local lines, hls = {}, {}
 
   add_line(lines, hls, ("# %s"):format(issue.title), "BeadsTitle")
@@ -148,7 +149,40 @@ function M.detail_lines(issue)
     end
   end
 
+  if comments and #comments > 0 then
+    add_line(lines, hls, "")
+    add_line(lines, hls, ("## Comments (%d)"):format(#comments), "BeadsSection")
+    for _, comment in ipairs(comments) do
+      add_line(lines, hls, ("%s — %s"):format(comment.author or "?", short_date(comment.created_at)), "BeadsMeta")
+      for _, l in ipairs(vim.split(comment.text or "", "\n", { plain = true })) do
+        add_line(lines, hls, "  " .. l)
+      end
+    end
+  end
+
   return lines, hls
+end
+
+--- Link-style highlight tuple for the first issue id on each line.
+--- Intended for surfaces with one id per line (bd graph output); issue
+--- titles may contain hyphenated words, so later matches are skipped to
+--- avoid false links. Pure.
+---@param lines string[]
+---@return table[] highlights ({lnum, col_start, col_end, hl_group})
+function M.link_spans(lines)
+  local hls = {}
+  for lnum, line in ipairs(lines) do
+    local s, e = line:find("[%a][%w_-]*%-%w+")
+    if s then
+      table.insert(hls, {
+        lnum = lnum - 1,
+        col_start = s - 1,
+        col_end = e,
+        hl_group = "BeadsLink",
+      })
+    end
+  end
+  return hls
 end
 
 --- Define default highlight groups (links); called once at plugin load.

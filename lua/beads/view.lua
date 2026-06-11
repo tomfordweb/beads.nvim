@@ -58,9 +58,9 @@ local function win_geometry()
   return float.center(96, count + 1)
 end
 
-local function set_content(issue)
+local function set_content(issue, comments)
   state.issue = issue
-  local lines, hls = render.detail_lines(issue)
+  local lines, hls = render.detail_lines(issue, comments)
 
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
@@ -168,6 +168,30 @@ local function setup_keymaps(buf)
     end
   end, "reopen issue")
 
+  bmap("a", function()
+    if not state.issue then
+      return
+    end
+    local id = state.issue.id
+    vim.ui.input({ prompt = "Comment on " .. id .. ": " }, function(text)
+      if not text or vim.trim(text) == "" then
+        return
+      end
+      cli.run_stdin({ "comment", id, "--stdin" }, text, function(ok)
+        if ok then
+          vim.notify("bd: commented on " .. id, vim.log.levels.INFO)
+          M.refresh()
+        end
+      end)
+    end)
+  end, "add comment")
+
+  bmap("D", function()
+    if state.issue then
+      require("beads.graphview").open(state.issue.id)
+    end
+  end, "dependency graph")
+
   bmap("gd", dep_jump, "jump to dependency")
   bmap("<CR>", dep_jump, "jump to dependency")
   bmap("<BS>", history_back, "back")
@@ -219,11 +243,14 @@ function M.open(id, opts)
       end
       return
     end
-    ensure_float(id)
-    if opts and opts.on_close then
-      state.on_close = opts.on_close
-    end
-    set_content(issues.normalize(result[1]))
+    local issue = issues.normalize(result[1])
+    cli.run_json({ "comments", id }, function(cok, comments)
+      ensure_float(id)
+      if opts and opts.on_close then
+        state.on_close = opts.on_close
+      end
+      set_content(issue, cok and comments or nil)
+    end)
   end)
 end
 
@@ -234,9 +261,15 @@ function M.refresh()
   end
   local id = state.issue.id
   cli.run_json({ "show", id }, function(ok, result)
-    if ok and result and result[1] and is_open() then
-      set_content(issues.normalize(result[1]))
+    if not (ok and result and result[1] and is_open()) then
+      return
     end
+    local issue = issues.normalize(result[1])
+    cli.run_json({ "comments", id }, function(cok, comments)
+      if is_open() then
+        set_content(issue, cok and comments or nil)
+      end
+    end)
   end)
 end
 

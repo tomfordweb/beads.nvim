@@ -105,6 +105,86 @@ local function title_for(filters, source)
   return table.concat(parts, " ") .. " │ " .. help
 end
 
+--- Live search picker over `bd search` (covers description text the
+--- cached fuzzy picker can't reach). Re-queries bd on every prompt change.
+---@param opts { default_text: string|nil }|nil
+function M.search(opts)
+  opts = opts or {}
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf = require("telescope.config").values
+  local actions = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+  local themes = require("telescope.themes")
+
+  render.define_highlights()
+  preview_cache = {}
+
+  local include_closed = false
+
+  local function title()
+    return ("Beads Search%s │ %s"):format(include_closed and " +closed" or "", helpbar.line("picker_search"))
+  end
+
+  local finder = finders.new_dynamic({
+    entry_maker = make_entry_maker(),
+    fn = function(prompt)
+      if not prompt or vim.trim(prompt) == "" then
+        return {}
+      end
+      local ok, results = cli.run_sync(issues.build_search_args(prompt, { all = include_closed }), { json = true })
+      if not ok or type(results) ~= "table" then
+        return {}
+      end
+      local out = {}
+      for _, r in ipairs(results) do
+        table.insert(out, issues.normalize(r))
+      end
+      return out
+    end,
+  })
+
+  local theme = config.get().picker.theme == "ivy" and themes.get_ivy({}) or {}
+
+  pickers
+    .new(theme, {
+      prompt_title = title(),
+      default_text = opts.default_text,
+      finder = finder,
+      sorter = conf.generic_sorter({}),
+      previewer = issue_previewer(),
+      attach_mappings = function(prompt_bufnr, map)
+        actions.select_default:replace(function()
+          local entry = action_state.get_selected_entry()
+          local p = action_state.get_current_picker(prompt_bufnr)
+          local prompt = p and p:_get_prompt() or ""
+          actions.close(prompt_bufnr)
+          if entry then
+            require("beads.view").open(entry.value.id, {
+              on_close = function()
+                M.search({ default_text = prompt })
+              end,
+            })
+          end
+        end)
+
+        map({ "i", "n" }, "<C-a>", function()
+          include_closed = not include_closed
+          local p = action_state.get_current_picker(prompt_bufnr)
+          if p then
+            p:refresh(finder, { reset_prompt = false })
+            if p.prompt_border then
+              p.prompt_border:change_title(title())
+            end
+          end
+        end)
+
+        return true
+      end,
+    })
+    :find()
+end
+
 --- Open the issue browser.
 ---@param opts { source: "list"|"ready"|nil, filters: table|nil, default_text: string|nil }|nil
 function M.open(opts)

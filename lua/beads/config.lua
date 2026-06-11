@@ -40,6 +40,9 @@ local default_keymaps = {
     c = "create",
     q = "quick",
     p = "palette",
+    m = "memories",
+    s = "search",
+    g = "graph",
   },
 }
 

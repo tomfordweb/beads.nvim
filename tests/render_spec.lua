@@ -104,4 +104,40 @@ describe("render.detail_lines", function()
     local lines = render.detail_lines(issue)
     assert.is_truthy(find_line(lines, "Blocks 5 other issue"))
   end)
+
+  it("renders comments section with author, date, and indented body", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local comments = {
+      { author = "Tom Ford", text = "first\nsecond", created_at = "2026-06-11T13:00:37Z" },
+    }
+    local lines = render.detail_lines(issue, comments)
+    assert.is_truthy(find_line(lines, "^## Comments %(1%)"))
+    assert.is_truthy(find_line(lines, "Tom Ford — 2026%-06%-11"))
+    assert.is_truthy(find_line(lines, "^  first$"))
+    assert.is_truthy(find_line(lines, "^  second$"))
+  end)
+
+  it("omits comments section when empty or nil", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    assert.is_nil(find_line(render.detail_lines(issue, {}), "^## Comments"))
+    assert.is_nil(find_line(render.detail_lines(issue), "^## Comments"))
+  end)
+end)
+
+describe("render.link_spans", function()
+  it("links the first id per line, byte-accurate", function()
+    local lines = {
+      "  ├── ✓ beads_nvim-ay7 ● P2 Phase 1: dep-jump polish",
+      "  no ids here",
+      "bundle-analyzer-v2y something",
+    }
+    local hls = render.link_spans(lines)
+    assert.equals(2, #hls)
+    assert.equals("beads_nvim-ay7", lines[1]:sub(hls[1].col_start + 1, hls[1].col_end))
+    assert.equals(2, hls[2].lnum)
+    assert.equals("bundle-analyzer-v2y", lines[3]:sub(hls[2].col_start + 1, hls[2].col_end))
+    for _, h in ipairs(hls) do
+      assert.equals("BeadsLink", h.hl_group)
+    end
+  end)
 end)

@@ -70,6 +70,35 @@ M.actions = {
       require("beads.palette").open()
     end,
   },
+  memories = {
+    desc = "browse memories",
+    fn = function()
+      require("beads.memories").open()
+    end,
+  },
+  search = {
+    desc = "live search",
+    fn = function()
+      require("beads.picker").search()
+    end,
+  },
+  graph = {
+    desc = "dependency graph",
+    fn = function()
+      local issues = require("beads.issues")
+      local id = issues.match_issue_id(vim.fn.expand("<cWORD>"))
+      if id then
+        require("beads.graphview").open(id)
+        return
+      end
+      vim.ui.input({ prompt = "Graph issue id: " }, function(input)
+        local target = input and issues.match_issue_id(input)
+        if target then
+          require("beads.graphview").open(target)
+        end
+      end)
+    end,
+  },
 }
 
 --- Resolve a menus value (action name, function, or { desc, fn } table)

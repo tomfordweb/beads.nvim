@@ -21,12 +21,18 @@ M.PANES = {
     { "<C-t>", "type" },
     { "<C-r>", "refetch" },
   },
+  picker_search = {
+    { "<CR>", "open" },
+    { "<C-a>", "closed" },
+  },
   view = {
     { "e", "edit" },
     { "s", "status" },
     { "p", "prio" },
+    { "a", "comment" },
     { "c", "close" },
     { "o", "reopen" },
+    { "D", "graph" },
     { "gd", "dep-jump" },
     { "<BS>", "back" },
     { "R", "refresh" },
@@ -37,6 +43,20 @@ M.PANES = {
     { ":q", "close" },
   },
   palette_output = {
+    { "q", "close" },
+  },
+  memories = {
+    { "<CR>", "edit" },
+    { "<C-n>", "new" },
+    { "<C-d>", "forget" },
+    { "<C-r>", "refetch" },
+  },
+  memory_edit = {
+    { ":w", "save" },
+    { ":q", "close" },
+  },
+  graph = {
+    { "gd", "open issue" },
     { "q", "close" },
   },
 }
