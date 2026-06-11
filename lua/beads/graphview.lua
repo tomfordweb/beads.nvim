@@ -2,8 +2,8 @@
 -- with ids link-styled and gd-jumpable into the detail view.
 
 local cli = require("beads.cli")
+local config = require("beads.config")
 local float = require("beads.float")
-local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
 
@@ -40,19 +40,12 @@ function M.open(id)
     end
 
     local function geometry()
-      return float.center(110, #lines + 1)
+      return float.center(float.dims("graph").width or 110, #lines + 1)
     end
     local win = vim.api.nvim_open_win(
       buf,
       true,
-      vim.tbl_extend("force", geometry(), {
-        border = "rounded",
-        title = " graph " .. id .. " ",
-        title_pos = "center",
-        footer = helpbar.footer("graph"),
-        footer_pos = "center",
-        style = "minimal",
-      })
+      float.decorate(geometry(), { title = " graph " .. id .. " ", pane = "graph", style = "minimal" })
     )
     vim.wo[win].wrap = false
     float.auto_resize(win, geometry)
@@ -70,13 +63,14 @@ function M.open(id)
       end
     end
 
-    local function bmap(lhs, rhs, desc)
-      vim.keymap.set("n", lhs, rhs, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. desc })
+    local m = config.get().mappings.graph
+    local function bmap(lhs_value, rhs, desc)
+      for _, lhs in ipairs(config.lhs(lhs_value)) do
+        vim.keymap.set("n", lhs, rhs, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. desc })
+      end
     end
-    bmap("q", close, "close graph")
-    bmap("<Esc>", close, "close graph")
-    bmap("gd", jump, "open issue under cursor")
-    bmap("<CR>", jump, "open issue under cursor")
+    bmap(m.quit, close, "close graph")
+    bmap(m.jump, jump, "open issue under cursor")
   end)
 end
 

@@ -6,8 +6,16 @@ local config = require("beads.config")
 local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
+local ui = require("beads.ui")
 
 local M = {}
+
+-- Bind a configurable mapping (string | list | false) inside attach_mappings.
+local function map_action(map, lhs_value, fn)
+  for _, lhs in ipairs(config.lhs(lhs_value)) do
+    map({ "i", "n" }, lhs, fn)
+  end
+end
 
 -- Previewer cache: issue id -> normalized full issue (from bd show --json),
 -- or false when the fetch failed. Cleared on every M.open.
@@ -102,7 +110,8 @@ local function title_for(filters, source)
   -- telescope draws its own borders, so the keybind help bar lives in the
   -- prompt title (bottom separator line under the ivy theme)
   local help = helpbar.line(source == "ready" and "picker_ready" or "picker")
-  return table.concat(parts, " ") .. " │ " .. help
+  local title = table.concat(parts, " ")
+  return help ~= "" and (title .. " │ " .. help) or title
 end
 
 --- Live search picker over `bd search` (covers description text the
@@ -115,7 +124,6 @@ function M.search(opts)
   local conf = require("telescope.config").values
   local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
-  local themes = require("telescope.themes")
 
   render.define_highlights()
   preview_cache = {}
@@ -123,7 +131,9 @@ function M.search(opts)
   local include_closed = false
 
   local function title()
-    return ("Beads Search%s │ %s"):format(include_closed and " +closed" or "", helpbar.line("picker_search"))
+    local base = "Beads Search" .. (include_closed and " +closed" or "")
+    local help = helpbar.line("picker_search")
+    return help ~= "" and (base .. " │ " .. help) or base
   end
 
   local finder = finders.new_dynamic({
@@ -144,16 +154,15 @@ function M.search(opts)
     end,
   })
 
-  local theme = config.get().picker.theme == "ivy" and themes.get_ivy({}) or {}
-
   pickers
-    .new(theme, {
+    .new(ui.picker_opts(), {
       prompt_title = title(),
       default_text = opts.default_text,
       finder = finder,
       sorter = conf.generic_sorter({}),
       previewer = issue_previewer(),
       attach_mappings = function(prompt_bufnr, map)
+        local m = config.get().mappings.picker
         actions.select_default:replace(function()
           local entry = action_state.get_selected_entry()
           local p = action_state.get_current_picker(prompt_bufnr)
@@ -167,8 +176,13 @@ function M.search(opts)
             })
           end
         end)
+        for _, lhs in ipairs(config.lhs(m.open)) do
+          if lhs ~= "<CR>" then
+            map({ "i", "n" }, lhs, actions.select_default)
+          end
+        end
 
-        map({ "i", "n" }, "<C-a>", function()
+        map_action(map, m.closed, function()
           include_closed = not include_closed
           local p = action_state.get_current_picker(prompt_bufnr)
           if p then
@@ -225,7 +239,6 @@ function M._open_picker(all_issues, filters, source, picker_opts)
   local conf = require("telescope.config").values
   local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
-  local themes = require("telescope.themes")
 
   render.define_highlights()
 
@@ -250,16 +263,15 @@ function M._open_picker(all_issues, filters, source, picker_opts)
     end
   end
 
-  local theme = config.get().picker.theme == "ivy" and themes.get_ivy({}) or {}
-
   pickers
-    .new(theme, {
+    .new(ui.picker_opts(), {
       prompt_title = title_for(filters, source),
       default_text = picker_opts and picker_opts.default_text or nil,
       finder = make_finder(),
       sorter = conf.generic_sorter({}),
       previewer = issue_previewer(),
       attach_mappings = function(prompt_bufnr, map)
+        local m = config.get().mappings.picker
         actions.select_default:replace(function()
           local entry = action_state.get_selected_entry()
           local p = action_state.get_current_picker(prompt_bufnr)
@@ -276,6 +288,11 @@ function M._open_picker(all_issues, filters, source, picker_opts)
             })
           end
         end)
+        for _, lhs in ipairs(config.lhs(m.open)) do
+          if lhs ~= "<CR>" then
+            map({ "i", "n" }, lhs, actions.select_default)
+          end
+        end
 
         local function cycle_filter(key, values)
           return function()
@@ -285,16 +302,16 @@ function M._open_picker(all_issues, filters, source, picker_opts)
         end
 
         if source ~= "ready" then
-          map({ "i", "n" }, "<C-s>", cycle_filter("status", issues.STATUSES))
-          map({ "i", "n" }, "<C-a>", function()
+          map_action(map, m.status, cycle_filter("status", issues.statuses()))
+          map_action(map, m.closed, function()
             filters.all = not filters.all
             refresh(prompt_bufnr)
           end)
         end
-        map({ "i", "n" }, "<C-y>", cycle_filter("priority", issues.PRIORITIES))
-        map({ "i", "n" }, "<C-t>", cycle_filter("type", issues.TYPES))
+        map_action(map, m.priority, cycle_filter("priority", issues.PRIORITIES))
+        map_action(map, m.type, cycle_filter("type", issues.types()))
 
-        map({ "i", "n" }, "<C-r>", function()
+        map_action(map, m.refetch, function()
           local fetch_args = source == "ready" and { "ready" }
             or issues.build_list_args({ all = true, limit = config.get().list_limit })
           cli.run_json(fetch_args, function(ok, raw)

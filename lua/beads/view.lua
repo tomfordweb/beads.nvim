@@ -2,10 +2,11 @@
 -- close/reopen), navigate dependencies in place with history.
 
 local cli = require("beads.cli")
+local config = require("beads.config")
 local float = require("beads.float")
-local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
+local util = require("beads.util")
 
 local M = {}
 
@@ -55,7 +56,7 @@ end
 -- Content-sized centered geometry for the current buffer.
 local function win_geometry()
   local count = state.buf and vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_buf_line_count(state.buf) or 24
-  return float.center(96, count + 1)
+  return float.center(float.dims("view").width or 96, count + 1)
 end
 
 local function set_content(issue, comments)
@@ -71,17 +72,12 @@ local function set_content(issue, comments)
   if is_open() then
     vim.api.nvim_win_set_config(
       state.win,
-      vim.tbl_extend("force", win_geometry(), {
-        title = " " .. issue.id .. " ",
-        title_pos = "center",
-        footer = helpbar.footer("view"),
-        footer_pos = "center",
-      })
+      float.decorate(win_geometry(), { title = " " .. issue.id .. " ", pane = "view" })
     )
   end
 end
 
-local function update_and_rerender(args, msg)
+local function update_and_rerender(args, msg, action)
   local id = state.issue and state.issue.id
   if not id then
     return
@@ -91,8 +87,9 @@ local function update_and_rerender(args, msg)
       return
     end
     if msg then
-      vim.notify("bd: " .. msg, vim.log.levels.INFO)
+      util.info("bd: " .. msg)
     end
+    util.emit("BeadsIssueUpdated", { id = id, action = action or args[1] })
     M.refresh()
   end)
 end
@@ -119,83 +116,110 @@ local function history_back()
   end
 end
 
-local function setup_keymaps(buf)
-  local function bmap(lhs, rhs, desc)
-    vim.keymap.set("n", lhs, rhs, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. desc })
-  end
-
-  bmap("q", close_win, "close")
-  bmap("<Esc>", close_win, "close")
-
-  bmap("e", function()
-    if state.issue then
-      require("beads.edit").open_description(state.issue)
-    end
-  end, "edit description")
-
-  bmap("s", function()
-    if not state.issue then
-      return
-    end
-    vim.ui.select(issues.STATUSES, { prompt = "Status for " .. state.issue.id }, function(choice)
-      if choice then
-        update_and_rerender({ "update", state.issue.id, "-s", choice }, state.issue.id .. " → " .. choice)
+-- Handlers for the configurable view mappings (config.mappings.view).
+local handlers = {
+  quit = { desc = "close", fn = close_win },
+  edit = {
+    desc = "edit description",
+    fn = function()
+      if state.issue then
+        require("beads.edit").open_description(state.issue)
       end
-    end)
-  end, "set status")
-
-  bmap("p", function()
-    if not state.issue then
-      return
-    end
-    local labels = { "P0 critical", "P1 high", "P2 normal", "P3 low", "P4 backlog" }
-    vim.ui.select(labels, { prompt = "Priority for " .. state.issue.id }, function(choice, idx)
-      if choice then
-        update_and_rerender({ "update", state.issue.id, "-p", tostring(idx - 1) }, state.issue.id .. " → P" .. (idx - 1))
-      end
-    end)
-  end, "set priority")
-
-  bmap("c", function()
-    if state.issue then
-      update_and_rerender({ "close", state.issue.id }, "closed " .. state.issue.id)
-    end
-  end, "close issue")
-
-  bmap("o", function()
-    if state.issue then
-      update_and_rerender({ "reopen", state.issue.id }, "reopened " .. state.issue.id)
-    end
-  end, "reopen issue")
-
-  bmap("a", function()
-    if not state.issue then
-      return
-    end
-    local id = state.issue.id
-    vim.ui.input({ prompt = "Comment on " .. id .. ": " }, function(text)
-      if not text or vim.trim(text) == "" then
+    end,
+  },
+  status = {
+    desc = "set status",
+    fn = function()
+      if not state.issue then
         return
       end
-      cli.run_stdin({ "comment", id, "--stdin" }, text, function(ok)
-        if ok then
-          vim.notify("bd: commented on " .. id, vim.log.levels.INFO)
-          M.refresh()
+      vim.ui.select(issues.statuses(), { prompt = "Status for " .. state.issue.id }, function(choice)
+        if choice then
+          update_and_rerender({ "update", state.issue.id, "-s", choice }, state.issue.id .. " → " .. choice, "status")
         end
       end)
-    end)
-  end, "add comment")
+    end,
+  },
+  priority = {
+    desc = "set priority",
+    fn = function()
+      if not state.issue then
+        return
+      end
+      local labels = { "P0 critical", "P1 high", "P2 normal", "P3 low", "P4 backlog" }
+      vim.ui.select(labels, { prompt = "Priority for " .. state.issue.id }, function(choice, idx)
+        if choice then
+          update_and_rerender(
+            { "update", state.issue.id, "-p", tostring(idx - 1) },
+            state.issue.id .. " → P" .. (idx - 1),
+            "priority"
+          )
+        end
+      end)
+    end,
+  },
+  close = {
+    desc = "close issue",
+    fn = function()
+      if state.issue then
+        update_and_rerender({ "close", state.issue.id }, "closed " .. state.issue.id, "close")
+      end
+    end,
+  },
+  reopen = {
+    desc = "reopen issue",
+    fn = function()
+      if state.issue then
+        update_and_rerender({ "reopen", state.issue.id }, "reopened " .. state.issue.id, "reopen")
+      end
+    end,
+  },
+  comment = {
+    desc = "add comment",
+    fn = function()
+      if not state.issue then
+        return
+      end
+      local id = state.issue.id
+      vim.ui.input({ prompt = "Comment on " .. id .. ": " }, function(text)
+        if not text or vim.trim(text) == "" then
+          return
+        end
+        cli.run_stdin({ "comment", id, "--stdin" }, text, function(ok)
+          if ok then
+            util.info("bd: commented on " .. id)
+            util.emit("BeadsIssueUpdated", { id = id, action = "comment" })
+            M.refresh()
+          end
+        end)
+      end)
+    end,
+  },
+  graph = {
+    desc = "dependency graph",
+    fn = function()
+      if state.issue then
+        require("beads.graphview").open(state.issue.id)
+      end
+    end,
+  },
+  jump = { desc = "jump to dependency", fn = dep_jump },
+  back = { desc = "back", fn = history_back },
+  refresh = {
+    desc = "refresh",
+    fn = function()
+      M.refresh()
+    end,
+  },
+}
 
-  bmap("D", function()
-    if state.issue then
-      require("beads.graphview").open(state.issue.id)
+local function setup_keymaps(buf)
+  local mappings = config.get().mappings.view or {}
+  for action, handler in pairs(handlers) do
+    for _, lhs in ipairs(config.lhs(mappings[action])) do
+      vim.keymap.set("n", lhs, handler.fn, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc })
     end
-  end, "dependency graph")
-
-  bmap("gd", dep_jump, "jump to dependency")
-  bmap("<CR>", dep_jump, "jump to dependency")
-  bmap("<BS>", history_back, "back")
-  bmap("R", M.refresh, "refresh")
+  end
 end
 
 local function ensure_float(id)
@@ -209,12 +233,9 @@ local function ensure_float(id)
   state.win = vim.api.nvim_open_win(
     state.buf,
     true,
-    vim.tbl_extend("force", float.center(96, 24), {
-      border = "rounded",
+    float.decorate(float.center(float.dims("view").width or 96, 24), {
       title = " " .. id .. " ",
-      title_pos = "center",
-      footer = helpbar.footer("view"),
-      footer_pos = "center",
+      pane = "view",
       style = "minimal",
     })
   )

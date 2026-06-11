@@ -156,6 +156,87 @@ describe("issues.matches", function()
   end)
 end)
 
+describe("issues.statuses / issues.types", function()
+  local cli = require("beads.cli")
+  local real_run_sync
+
+  before_each(function()
+    real_run_sync = cli.run_sync
+    issues._reset_lists()
+  end)
+
+  after_each(function()
+    cli.run_sync = real_run_sync
+    issues._reset_lists()
+    require("beads.config").setup({})
+  end)
+
+  it("fetches status names and icons from bd", function()
+    cli.run_sync = function(args)
+      assert.are.same({ "statuses" }, args)
+      return true, {
+        built_in_statuses = {
+          { name = "open", icon = "○" },
+          { name = "hooked", icon = "◇" },
+        },
+        schema_version = 1,
+      }
+    end
+    assert.are.same({ "open", "hooked" }, issues.statuses())
+    -- not in config icon table -> falls back to bd's icon
+    assert.equals("◇", issues.status_icon("hooked"))
+  end)
+
+  it("caches after first fetch", function()
+    local calls = 0
+    cli.run_sync = function()
+      calls = calls + 1
+      return true, { built_in_statuses = { { name = "open" } } }
+    end
+    issues.statuses()
+    issues.statuses()
+    assert.equals(1, calls)
+  end)
+
+  it("falls back to hardcoded lists when bd fails", function()
+    cli.run_sync = function()
+      return false, nil, "no bd"
+    end
+    assert.are.same(issues.STATUSES, issues.statuses())
+    assert.are.same(issues.TYPES, issues.types())
+  end)
+
+  it("fetches type names from bd", function()
+    cli.run_sync = function(args)
+      assert.are.same({ "types" }, args)
+      return true, { core_types = { { name = "task" }, { name = "spike" } } }
+    end
+    assert.are.same({ "task", "spike" }, issues.types())
+  end)
+
+  it("fallback lists include deferred and decision", function()
+    assert.is_truthy(vim.tbl_contains(issues.STATUSES, "deferred"))
+    assert.is_truthy(vim.tbl_contains(issues.TYPES, "decision"))
+  end)
+end)
+
+describe("issues.status_icon", function()
+  after_each(function()
+    require("beads.config").setup({})
+    issues._reset_lists()
+  end)
+
+  it("reads from config", function()
+    assert.equals("○", issues.status_icon("open"))
+    require("beads.config").setup({ icons = { status = { open = "O" } } })
+    assert.equals("O", issues.status_icon("open"))
+  end)
+
+  it("returns ? for unknown status", function()
+    assert.equals("?", issues.status_icon("bogus"))
+  end)
+end)
+
 describe("issues.cycle", function()
   it("starts at first value from nil", function()
     assert.equals("open", issues.cycle(nil, issues.STATUSES))

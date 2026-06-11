@@ -24,12 +24,13 @@ end
 ---@param issue table normalized issue
 ---@return { id: string, icon: string, priority: string, type: string, title: string, deps: string }
 function M.entry_columns(issue)
+  local icons = require("beads.config").get().icons
   local deps = ""
   if issue.dependency_count > 0 then
-    deps = "↓" .. issue.dependency_count
+    deps = (icons.deps_down or "↓") .. issue.dependency_count
   end
   if issue.dependent_count > 0 then
-    deps = deps .. (deps ~= "" and " " or "") .. "↑" .. issue.dependent_count
+    deps = deps .. (deps ~= "" and " " or "") .. (icons.deps_up or "↑") .. issue.dependent_count
   end
   return {
     id = issue.id,

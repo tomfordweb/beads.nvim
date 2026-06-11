@@ -7,6 +7,8 @@ local config = require("beads.config")
 local float = require("beads.float")
 local helpbar = require("beads.helpbar")
 local render = require("beads.render")
+local ui = require("beads.ui")
+local util = require("beads.util")
 
 local M = {}
 
@@ -34,22 +36,19 @@ function M.edit(key, value)
   render.define_highlights()
   local name = ("beads://memory/%s"):format(key)
 
+  local function geometry()
+    local dims = float.dims("edit")
+    return float.center(dims.width or 90, dims.height or 20)
+  end
+
   local function open_float(buf)
     local win = vim.api.nvim_open_win(
       buf,
       true,
-      vim.tbl_extend("force", float.center(90, 20), {
-        border = "rounded",
-        title = (" memory %s "):format(key),
-        title_pos = "center",
-        footer = helpbar.footer("memory_edit"),
-        footer_pos = "center",
-      })
+      float.decorate(geometry(), { title = (" memory %s "):format(key), pane = "memory_edit" })
     )
     vim.wo[win].wrap = true
-    float.auto_resize(win, function()
-      return float.center(90, 20)
-    end)
+    float.auto_resize(win, geometry)
   end
 
   local existing = vim.fn.bufnr(name)
@@ -82,7 +81,8 @@ function M.edit(key, value)
         if vim.api.nvim_buf_is_valid(buf) then
           vim.bo[buf].modified = false
         end
-        vim.notify("bd: remembered " .. key, vim.log.levels.INFO)
+        util.info("bd: remembered " .. key)
+        util.emit("BeadsMemoryUpdated", { key = key, action = "remember" })
       end)
     end,
   })
@@ -110,7 +110,6 @@ function M._open_picker(entries)
   local action_state = require("telescope.actions.state")
   local entry_display = require("telescope.pickers.entry_display")
   local previewers = require("telescope.previewers")
-  local themes = require("telescope.themes")
 
   render.define_highlights()
 
@@ -147,11 +146,11 @@ function M._open_picker(entries)
     end)
   end
 
-  local theme = config.get().picker.theme == "ivy" and themes.get_ivy({}) or {}
+  local help = helpbar.line("memories")
 
   pickers
-    .new(theme, {
-      prompt_title = "Beads Memories │ " .. helpbar.line("memories"),
+    .new(ui.picker_opts(), {
+      prompt_title = help ~= "" and ("Beads Memories │ " .. help) or "Beads Memories",
       finder = make_finder(),
       sorter = conf.generic_sorter({}),
       previewer = previewers.new_buffer_previewer({
@@ -169,6 +168,13 @@ function M._open_picker(entries)
         end,
       }),
       attach_mappings = function(prompt_bufnr, map)
+        local m = config.get().mappings.memories
+        local function map_action(lhs_value, fn)
+          for _, lhs in ipairs(config.lhs(lhs_value)) do
+            map({ "i", "n" }, lhs, fn)
+          end
+        end
+
         actions.select_default:replace(function()
           local entry = action_state.get_selected_entry()
           actions.close(prompt_bufnr)
@@ -176,13 +182,18 @@ function M._open_picker(entries)
             M.edit(entry.value.key, entry.value.value)
           end
         end)
+        for _, lhs in ipairs(config.lhs(m.edit)) do
+          if lhs ~= "<CR>" then
+            map({ "i", "n" }, lhs, actions.select_default)
+          end
+        end
 
-        map({ "i", "n" }, "<C-n>", function()
+        map_action(m.new, function()
           actions.close(prompt_bufnr)
           M.new()
         end)
 
-        map({ "i", "n" }, "<C-d>", function()
+        map_action(m.forget, function()
           local entry = action_state.get_selected_entry()
           if not entry then
             return
@@ -193,13 +204,14 @@ function M._open_picker(entries)
           end
           cli.run_plain({ "forget", key }, function(ok)
             if ok then
-              vim.notify("bd: forgot " .. key, vim.log.levels.INFO)
+              util.info("bd: forgot " .. key)
+              util.emit("BeadsMemoryUpdated", { key = key, action = "forget" })
               refetch(prompt_bufnr)
             end
           end)
         end)
 
-        map({ "i", "n" }, "<C-r>", refetch)
+        map_action(m.refetch, refetch)
 
         return true
       end,

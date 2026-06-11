@@ -1,5 +1,6 @@
 -- Shared float geometry: centered layout plus redraw on VimResized, so
 -- terminal size changes (tmux pane resize/zoom) re-center open floats.
+-- Dimensions and border come from the `float` config table.
 
 local M = {}
 
@@ -17,6 +18,44 @@ function M.center(max_width, max_height)
     row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
     col = math.max(0, math.floor((vim.o.columns - width) / 2)),
   }
+end
+
+--- Configured dimensions for a float kind ("view"|"edit"|"palette"|"graph").
+---@param kind string
+---@return { width: integer, height: integer|nil }
+function M.dims(kind)
+  return require("beads.config").get().float[kind] or {}
+end
+
+--- Configured border style.
+---@return string|table
+function M.border()
+  return require("beads.config").get().float.border
+end
+
+--- Decorate a win config with border, title and (when the helpbar is
+--- enabled) the pane's footer. footer_pos without footer is an nvim error,
+--- so the footer keys are only set when there is something to show.
+---@param cfg table geometry fragment (from M.center)
+---@param opts { title: string|nil, pane: string|nil, style: string|nil }
+---@return table
+function M.decorate(cfg, opts)
+  cfg = vim.tbl_extend("force", cfg, { border = M.border() })
+  if opts.title then
+    cfg.title = opts.title
+    cfg.title_pos = "center"
+  end
+  if opts.style then
+    cfg.style = opts.style
+  end
+  if opts.pane then
+    local footer = require("beads.helpbar").footer(opts.pane)
+    if footer then
+      cfg.footer = footer
+      cfg.footer_pos = "center"
+    end
+  end
+  return cfg
 end
 
 --- Re-apply geometry from `recompute` on every VimResized until the

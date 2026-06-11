@@ -3,9 +3,14 @@
 
 local cli = require("beads.cli")
 local float = require("beads.float")
-local helpbar = require("beads.helpbar")
+local util = require("beads.util")
 
 local M = {}
+
+local function geometry()
+  local dims = float.dims("edit")
+  return float.center(dims.width or 90, dims.height or 20)
+end
 
 -- The detail view is a float, and floats cannot be split — the edit buffer
 -- opens in its own centered float instead.
@@ -13,18 +18,10 @@ local function open_float(buf, id)
   local win = vim.api.nvim_open_win(
     buf,
     true,
-    vim.tbl_extend("force", float.center(90, 20), {
-      border = "rounded",
-      title = (" edit %s "):format(id),
-      title_pos = "center",
-      footer = helpbar.footer("edit"),
-      footer_pos = "center",
-    })
+    float.decorate(geometry(), { title = (" edit %s "):format(id), pane = "edit" })
   )
   vim.wo[win].wrap = true
-  float.auto_resize(win, function()
-    return float.center(90, 20)
-  end)
+  float.auto_resize(win, geometry)
   return win
 end
 
@@ -61,7 +58,8 @@ function M.open_description(issue)
         if vim.api.nvim_buf_is_valid(buf) then
           vim.bo[buf].modified = false
         end
-        vim.notify("bd: updated description of " .. issue.id, vim.log.levels.INFO)
+        util.info("bd: updated description of " .. issue.id)
+        util.emit("BeadsIssueUpdated", { id = issue.id, action = "update" })
         require("beads.view").refresh()
       end)
     end,

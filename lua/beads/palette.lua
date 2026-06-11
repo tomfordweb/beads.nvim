@@ -3,7 +3,6 @@
 local cli = require("beads.cli")
 local config = require("beads.config")
 local float = require("beads.float")
-local helpbar = require("beads.helpbar")
 local render = require("beads.render")
 
 local M = {}
@@ -44,19 +43,12 @@ local function show_output(text, title)
   vim.bo[buf].modifiable = false
 
   local function geometry()
-    return float.center(100, #lines + 1)
+    return float.center(float.dims("palette").width or 100, #lines + 1)
   end
   local win = vim.api.nvim_open_win(
     buf,
     true,
-    vim.tbl_extend("force", geometry(), {
-      border = "rounded",
-      title = " bd " .. title .. " ",
-      title_pos = "center",
-      footer = helpbar.footer("palette_output"),
-      footer_pos = "center",
-      style = "minimal",
-    })
+    float.decorate(geometry(), { title = " bd " .. title .. " ", pane = "palette_output", style = "minimal" })
   )
   vim.wo[win].wrap = false
   float.auto_resize(win, geometry)

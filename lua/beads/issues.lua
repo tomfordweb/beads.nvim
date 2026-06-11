@@ -1,25 +1,71 @@
--- Pure helpers: CLI argument builders, issue normalization, display constants.
--- No vim API side effects beyond table utilities; everything here is unit-testable.
+-- Mostly-pure helpers: CLI argument builders, issue normalization, display
+-- constants. statuses()/types() are the one exception — they lazily shell out
+-- to bd (once, cached) so custom statuses/types configured in bd show up.
 
 local M = {}
 
--- Cycle orders used by the picker filter mappings. nil means "no filter".
-M.STATUSES = { "open", "in_progress", "blocked", "closed" }
-M.TYPES = { "bug", "feature", "task", "epic", "chore" }
+-- Fallback cycle orders for the picker filter mappings; the live lists come
+-- from `bd statuses` / `bd types` via M.statuses() / M.types() so custom
+-- types configured in bd show up. nil means "no filter".
+M.STATUSES = { "open", "in_progress", "blocked", "deferred", "closed" }
+M.TYPES = { "bug", "feature", "task", "epic", "chore", "decision" }
 M.PRIORITIES = { 0, 1, 2, 3, 4 }
 
-M.STATUS_ICONS = {
-  open = "○",
-  in_progress = "◐",
-  blocked = "⊘",
-  deferred = "❄",
-  closed = "●",
-}
+-- Lazily fetched per session; _reset_lists() clears for tests.
+local lists = { statuses = nil, types = nil, status_icons = {} }
+
+function M._reset_lists()
+  lists = { statuses = nil, types = nil, status_icons = {} }
+end
+
+--- Status names from `bd statuses --json` (cached; falls back to M.STATUSES
+--- when bd is unavailable). Also caches bd's own status icons as a fallback
+--- icon source for statuses the config table doesn't know.
+---@return string[]
+function M.statuses()
+  if lists.statuses then
+    return lists.statuses
+  end
+  local out = {}
+  local ok, raw = require("beads.cli").run_sync({ "statuses" }, { json = true })
+  if ok and type(raw) == "table" then
+    for _, s in ipairs(raw.built_in_statuses or {}) do
+      if type(s.name) == "string" then
+        table.insert(out, s.name)
+        if type(s.icon) == "string" then
+          lists.status_icons[s.name] = s.icon
+        end
+      end
+    end
+  end
+  lists.statuses = #out > 0 and out or vim.deepcopy(M.STATUSES)
+  return lists.statuses
+end
+
+--- Type names from `bd types --json` (cached; falls back to M.TYPES).
+---@return string[]
+function M.types()
+  if lists.types then
+    return lists.types
+  end
+  local out = {}
+  local ok, raw = require("beads.cli").run_sync({ "types" }, { json = true })
+  if ok and type(raw) == "table" then
+    for _, t in ipairs(raw.core_types or {}) do
+      if type(t.name) == "string" then
+        table.insert(out, t.name)
+      end
+    end
+  end
+  lists.types = #out > 0 and out or vim.deepcopy(M.TYPES)
+  return lists.types
+end
 
 ---@param status string|nil
 ---@return string
 function M.status_icon(status)
-  return M.STATUS_ICONS[status] or "?"
+  local icons = require("beads.config").get().icons.status or {}
+  return icons[status] or lists.status_icons[status] or "?"
 end
 
 ---@param priority integer|nil

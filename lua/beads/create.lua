@@ -2,6 +2,7 @@
 
 local cli = require("beads.cli")
 local issues = require("beads.issues")
+local util = require("beads.util")
 
 local M = {}
 
@@ -25,7 +26,8 @@ function M._quick_run(title)
       return
     end
     local id = vim.trim(stdout or "")
-    vim.notify("bd: created " .. id, vim.log.levels.INFO)
+    util.info("bd: created " .. id)
+    util.emit("BeadsIssueUpdated", { id = id, action = "create" })
   end)
 end
 
@@ -39,11 +41,12 @@ local function submit(form)
     end
     local created = result and (result.id and result or result[1])
     local id = created and created.id
+    util.emit("BeadsIssueUpdated", { id = id, action = "create" })
     if not id then
-      vim.notify("bd: issue created", vim.log.levels.INFO)
+      util.info("bd: issue created")
       return
     end
-    vim.notify("bd: created " .. id, vim.log.levels.INFO)
+    util.info("bd: created " .. id)
     require("beads.view").open(id)
   end)
 end
@@ -67,7 +70,7 @@ local function step_priority(form)
 end
 
 local function step_type(form)
-  vim.ui.select(issues.TYPES, { prompt = "Type" }, function(choice)
+  vim.ui.select(issues.types(), { prompt = "Type" }, function(choice)
     if not choice then
       return
     end

@@ -64,17 +64,91 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
 
 ## Configuration
 
+All keys optional; shown with defaults. Tables deep-merge, so override only
+what you need.
+
 ```lua
 require("beads").setup({
   bd_bin = "bd",            -- path to the bd binary
   cwd = nil,                -- nil: walk up from current buffer for .beads/
   list_limit = 200,         -- bd list -n
   default_filters = { status = nil, priority = nil, type = nil, all = false },
-  picker = { theme = "ivy" },
-  keymaps = true,           -- false (default), true, or { base, menus }
+
+  picker = {
+    theme = "ivy",          -- "ivy" | "dropdown" | "cursor" | false (your telescope defaults)
+    theme_opts = {},        -- passed to the theme builder (e.g. { layout_config = { height = 0.4 } })
+    telescope = {},         -- raw telescope picker opts, merged last
+  },
+
+  keymaps = true,           -- false (default), true, or { base, menus } — global leader maps
+
+  -- in-pane mappings, keyed action -> key. A value may be a string, a list
+  -- of equivalent keys, or false to disable. Partial overrides merge; an
+  -- overridden value replaces the default wholesale.
+  mappings = {
+    picker   = { open = "<CR>", status = "<C-s>", priority = "<C-y>", type = "<C-t>", closed = "<C-a>", refetch = "<C-r>" },
+    view     = { edit = "e", status = "s", priority = "p", comment = "a", close = "c", reopen = "o",
+                 graph = "D", jump = { "gd", "<CR>" }, back = "<BS>", refresh = "R", quit = { "q", "<Esc>" } },
+    memories = { edit = "<CR>", new = "<C-n>", forget = "<C-d>", refetch = "<C-r>" },
+    graph    = { jump = { "gd", "<CR>" }, quit = { "q", "<Esc>" } },
+  },
+
+  icons = {
+    status = { open = "○", in_progress = "◐", blocked = "⊘", deferred = "❄", closed = "●" },
+    deps_down = "↓",        -- "blocks N" column arrow
+    deps_up = "↑",          -- "blocked by N" column arrow
+  },
+
+  float = {
+    border = "rounded",     -- any nvim_open_win border
+    view = { width = 96 },  -- heights are content-sized
+    edit = { width = 90, height = 20 },  -- also the memory edit float
+    palette = { width = 100 },
+    graph = { width = 110 },
+  },
+
+  helpbar = true,           -- false: no keybind footers / prompt-title help
+  notify = true,            -- false: silence success messages (errors always shown)
   palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
 })
 ```
+
+The same table can be passed through telescope instead (merges with
+`setup()`, either order):
+
+```lua
+require("telescope").setup({
+  extensions = { beads = { picker = { theme = "dropdown" } } },
+})
+```
+
+### Highlight groups
+
+All groups are `default`-linked — override with `vim.api.nvim_set_hl` or your
+colorscheme: `BeadsTitle` (→Title), `BeadsMeta` (→Comment), `BeadsSection`
+(→Function), `BeadsLink` (→Underlined), `BeadsHelp` (→NonText), `BeadsHelpKey`
+(→Special), `BeadsStatusOpen` (→DiagnosticInfo), `BeadsStatusInProgress`
+(→DiagnosticWarn), `BeadsStatusBlocked` (→DiagnosticError), `BeadsStatusClosed`
+(→Comment), `BeadsStatusDeferred` (→NonText).
+
+### Events
+
+`User` autocmds fire after successful mutations, for statusline refreshes etc.:
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "BeadsIssueUpdated", -- data = { id, action = "create"|"status"|"priority"|"close"|"reopen"|"comment"|"update" }
+  callback = function(ev) ... end,
+})
+-- also: BeadsMemoryUpdated — data = { key, action = "remember"|"forget" }
+```
+
+### Statuses and types
+
+Filter cycles and select prompts use `bd statuses` / `bd types` (fetched once
+per session), so custom types configured in bd appear automatically.
+
+Run `:checkhealth beads` to verify the install.
 
 ### Keymaps
 
