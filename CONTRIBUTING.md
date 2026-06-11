@@ -53,6 +53,10 @@ luacheck lua tests plugin           # linting   (config: .luacheckrc)
 
 `stylua lua tests plugin` (without `--check`) applies the formatting.
 
+A `Makefile` wraps these for convenience: `make test`, `make fmt`,
+`make fmt-check`, `make lint`, and `make check` (formatting check + lint +
+tests, matching CI). Run `make help` for the full list.
+
 ## Documentation is single-source
 
 User docs live in **`README.md`**. The Vim help file `doc/beads.txt` and the
