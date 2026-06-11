@@ -2,6 +2,7 @@
 
 local cli = require("beads.cli")
 local config = require("beads.config")
+local helpbar = require("beads.helpbar")
 local render = require("beads.render")
 
 local M = {}
@@ -25,6 +26,7 @@ M.commands = {
 ---@param text string
 ---@param title string
 local function show_output(text, title)
+  render.define_highlights()
   local lines = vim.split(render.strip_ansi(text), "\n", { plain = true })
   -- trim trailing blank lines
   while #lines > 0 and lines[#lines] == "" do
@@ -51,6 +53,8 @@ local function show_output(text, title)
     border = "rounded",
     title = " bd " .. title .. " ",
     title_pos = "center",
+    footer = helpbar.footer("palette_output"),
+    footer_pos = "center",
     style = "minimal",
   })
   vim.wo[win].wrap = false

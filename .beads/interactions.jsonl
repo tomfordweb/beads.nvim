@@ -4,3 +4,4 @@
 {"id":"int-51006b7c","kind":"field_change","created_at":"2026-06-11T11:44:09.370036443Z","actor":"Tom Ford","issue_id":"beads_nvim-8cz","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-c5abfcb0","kind":"field_change","created_at":"2026-06-11T11:46:36.025488197Z","actor":"Tom Ford","issue_id":"beads_nvim-b8c","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-5d8e59f0","kind":"field_change","created_at":"2026-06-11T11:46:36.250306117Z","actor":"Tom Ford","issue_id":"beads_nvim-x9s","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
+{"id":"int-a09789f7","kind":"field_change","created_at":"2026-06-11T12:01:09.969099455Z","actor":"Tom Ford","issue_id":"beads_nvim-tgn","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}

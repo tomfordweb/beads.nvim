@@ -2,6 +2,7 @@
 -- `bd update <id> --body-file -`.
 
 local cli = require("beads.cli")
+local helpbar = require("beads.helpbar")
 
 local M = {}
 
@@ -17,8 +18,10 @@ local function open_float(buf, id)
     row = math.floor((vim.o.lines - height) / 2),
     col = math.floor((vim.o.columns - width) / 2),
     border = "rounded",
-    title = (" edit %s — :w saves, :q closes "):format(id),
+    title = (" edit %s "):format(id),
     title_pos = "center",
+    footer = helpbar.footer("edit"),
+    footer_pos = "center",
   })
   vim.wo[win].wrap = true
   return win
@@ -27,6 +30,7 @@ end
 --- Open a float with the issue description; :w persists via bd update.
 ---@param issue table normalized issue (needs id + description)
 function M.open_description(issue)
+  require("beads.render").define_highlights()
   local name = ("beads://%s/description"):format(issue.id)
 
   -- Reuse an existing edit buffer for this issue if one is already open.

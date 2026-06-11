@@ -2,6 +2,7 @@
 -- close/reopen), navigate dependencies in place with history.
 
 local cli = require("beads.cli")
+local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
 
@@ -52,6 +53,8 @@ local function set_content(issue)
     vim.api.nvim_win_set_config(state.win, {
       title = " " .. issue.id .. " ",
       title_pos = "center",
+      footer = helpbar.footer("view"),
+      footer_pos = "center",
       height = height,
     })
   end
@@ -165,6 +168,8 @@ local function ensure_float(id)
     border = "rounded",
     title = " " .. id .. " ",
     title_pos = "center",
+    footer = helpbar.footer("view"),
+    footer_pos = "center",
     style = "minimal",
   })
   vim.wo[state.win].wrap = true

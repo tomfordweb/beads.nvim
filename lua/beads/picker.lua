@@ -3,6 +3,7 @@
 
 local cli = require("beads.cli")
 local config = require("beads.config")
+local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
 
@@ -98,7 +99,10 @@ local function title_for(filters, source)
   if filters.all then
     table.insert(parts, "+closed")
   end
-  return table.concat(parts, " ")
+  -- telescope draws its own borders, so the keybind help bar lives in the
+  -- prompt title (bottom separator line under the ivy theme)
+  local help = helpbar.line(source == "ready" and "picker_ready" or "picker")
+  return table.concat(parts, " ") .. " │ " .. help
 end
 
 --- Open the issue browser.

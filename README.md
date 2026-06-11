@@ -23,6 +23,8 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
 - **Command palette** — `:BeadsPalette` runs repo-level commands
   (`status`, `ready`, `stale`, `lint`, `dep cycles`, `init`, …) with output
   in a float.
+- **Help bar** — every pane shows its keybinds: floats render them in the
+  window footer, the picker in its prompt title.
 
 ## Requirements
 

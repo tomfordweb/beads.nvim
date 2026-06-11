@@ -138,14 +138,6 @@ function M.detail_lines(issue)
     end
   end
 
-  add_line(lines, hls, "")
-  add_line(
-    lines,
-    hls,
-    "[e]dit  [s]tatus  [p]riority  [c]lose  [o]reopen  [gd]ep-jump  [<BS>]back  [R]efresh  [q]uit",
-    "BeadsHelp"
-  )
-
   return lines, hls
 end
 
@@ -156,6 +148,7 @@ function M.define_highlights()
     BeadsMeta = "Comment",
     BeadsSection = "Function",
     BeadsHelp = "NonText",
+    BeadsHelpKey = "Special",
     BeadsStatusOpen = "DiagnosticInfo",
     BeadsStatusInProgress = "DiagnosticWarn",
     BeadsStatusBlocked = "DiagnosticError",
