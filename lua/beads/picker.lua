@@ -104,6 +104,9 @@ local function title_for(filters, source)
   if filters.type then
     table.insert(parts, filters.type)
   end
+  if filters.label then
+    table.insert(parts, "#" .. filters.label)
+  end
   if filters.all then
     table.insert(parts, "+closed")
   end
@@ -310,6 +313,12 @@ function M._open_picker(all_issues, filters, source, picker_opts)
         end
         map_action(map, m.priority, cycle_filter("priority", issues.PRIORITIES))
         map_action(map, m.type, cycle_filter("type", issues.types()))
+        -- label values track the loaded issues, recomputed each cycle so a
+        -- refetch that adds/removes labels stays in sync
+        map_action(map, m.label, function()
+          filters.label = issues.cycle(filters.label, issues.collect_labels(all_issues))
+          refresh(prompt_bufnr)
+        end)
 
         map_action(map, m.refetch, function()
           local fetch_args = source == "ready" and { "ready" }

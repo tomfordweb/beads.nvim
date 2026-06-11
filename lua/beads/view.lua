@@ -278,6 +278,59 @@ local handlers = {
       end)
     end,
   },
+  labels = {
+    desc = "manage labels",
+    fn = function()
+      if not state.issue then
+        return
+      end
+      local id = state.issue.id
+      local current = state.issue.labels or {}
+      -- existing labels (across the db) offered as quick-add choices, current
+      -- labels offered for removal, plus a free-text "new label" escape hatch
+      cli.run_json({ "label", "list-all" }, function(ok, all)
+        local items, dispatch = {}, {}
+        for _, l in ipairs(current) do
+          table.insert(items, "− " .. l)
+          table.insert(dispatch, { op = "remove", label = l })
+        end
+        if ok and type(all) == "table" then
+          for _, entry in ipairs(all) do
+            local name = type(entry) == "table" and entry.label or entry
+            if type(name) == "string" and not vim.tbl_contains(current, name) then
+              table.insert(items, "+ " .. name)
+              table.insert(dispatch, { op = "add", label = name })
+            end
+          end
+        end
+        table.insert(items, "✚ new label…")
+        table.insert(dispatch, { op = "new" })
+        vim.ui.select(items, { prompt = "Labels for " .. id }, function(_, idx)
+          local action = idx and dispatch[idx]
+          if not action then
+            return
+          end
+          if action.op == "new" then
+            vim.ui.input({ prompt = "New label: " }, function(input)
+              local name = input and vim.trim(input)
+              if not name or name == "" then
+                return
+              end
+              update_and_rerender({ "label", "add", id, name }, "labeled " .. id .. " #" .. name, "label")
+            end)
+          elseif action.op == "add" then
+            update_and_rerender({ "label", "add", id, action.label }, "labeled " .. id .. " #" .. action.label, "label")
+          else
+            update_and_rerender(
+              { "label", "remove", id, action.label },
+              "unlabeled " .. id .. " #" .. action.label,
+              "label"
+            )
+          end
+        end)
+      end)
+    end,
+  },
   graph = {
     desc = "dependency graph",
     fn = function()

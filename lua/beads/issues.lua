@@ -234,7 +234,28 @@ function M.matches(issue, filters)
   if filters.type and issue.issue_type ~= filters.type then
     return false
   end
+  if filters.label and not vim.tbl_contains(issue.labels or {}, filters.label) then
+    return false
+  end
   return true
+end
+
+--- Unique labels across a set of issues, sorted. Feeds the picker label
+--- filter cycle so its values track the loaded issues (no extra CLI call).
+---@param list table[] normalized issues
+---@return string[]
+function M.collect_labels(list)
+  local seen, out = {}, {}
+  for _, issue in ipairs(list or {}) do
+    for _, l in ipairs(issue.labels or {}) do
+      if not seen[l] then
+        seen[l] = true
+        table.insert(out, l)
+      end
+    end
+  end
+  table.sort(out)
+  return out
 end
 
 --- Cycle a value through a list: nil -> list[1] -> ... -> list[#list] -> nil.

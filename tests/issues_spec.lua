@@ -154,6 +154,30 @@ describe("issues.matches", function()
     assert.is_false(issues.matches(open_bug, { priority = 0 }))
     assert.is_false(issues.matches(open_bug, { type = "task" }))
   end)
+
+  it("filters by label", function()
+    local tagged = issues.normalize({ id = "x-3", title = "t", status = "open", labels = { "ui", "perf" } })
+    assert.is_true(issues.matches(tagged, { label = "ui" }))
+    assert.is_true(issues.matches(tagged, { label = "perf" }))
+    assert.is_false(issues.matches(tagged, { label = "docs" }))
+    assert.is_false(issues.matches(open_bug, { label = "ui" }))
+  end)
+end)
+
+describe("issues.collect_labels", function()
+  it("returns unique sorted labels across issues", function()
+    local list = {
+      issues.normalize({ id = "x-1", labels = { "ui", "perf" } }),
+      issues.normalize({ id = "x-2", labels = { "perf", "docs" } }),
+      issues.normalize({ id = "x-3" }),
+    }
+    assert.same({ "docs", "perf", "ui" }, issues.collect_labels(list))
+  end)
+
+  it("returns empty for no labels", function()
+    assert.same({}, issues.collect_labels({ issues.normalize({ id = "x-1" }) }))
+    assert.same({}, issues.collect_labels({}))
+  end)
 end)
 
 describe("issues.partition_links", function()

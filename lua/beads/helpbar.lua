@@ -19,6 +19,7 @@ M.PANES = {
     { action = "status", label = "status" },
     { action = "priority", label = "prio" },
     { action = "type", label = "type" },
+    { action = "label", label = "label" },
     { action = "closed", label = "closed" },
     { action = "refetch", label = "refetch" },
   },
@@ -27,6 +28,7 @@ M.PANES = {
     { action = "open", label = "open" },
     { action = "priority", label = "prio" },
     { action = "type", label = "type" },
+    { action = "label", label = "label" },
     { action = "refetch", label = "refetch" },
   },
   picker_search = {
@@ -40,6 +42,7 @@ M.PANES = {
     { action = "status", label = "status" },
     { action = "priority", label = "prio" },
     { action = "comment", label = "comment" },
+    { action = "labels", label = "labels" },
     { action = "close", label = "close" },
     { action = "reopen", label = "reopen" },
     { action = "graph", label = "graph" },
