@@ -96,6 +96,12 @@ describe("issues.match_issue_id", function()
     assert.equals("beads_nvim-x9s", issues.match_issue_id("beads_nvim-x9s"))
   end)
 
+  it("matches full id when prefix contains hyphens", function()
+    assert.equals("bundle-analyzer-v2y", issues.match_issue_id("bundle-analyzer-v2y"))
+    assert.equals("my-multi-part-repo-a1b", issues.match_issue_id("my-multi-part-repo-a1b"))
+    assert.equals("bundle-analyzer-v2y", issues.match_issue_id("(bundle-analyzer-v2y),"))
+  end)
+
   it("matches id embedded in punctuation", function()
     assert.equals("bd-15", issues.match_issue_id("(bd-15)"))
     assert.equals("beads_nvim-ay7", issues.match_issue_id("beads_nvim-ay7:"))

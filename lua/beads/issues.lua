@@ -32,15 +32,17 @@ function M.priority_label(priority)
 end
 
 --- Extract a bead issue id from a word under cursor.
---- Ids look like `<prefix>-<hash>` where prefix may contain letters, digits
---- and underscores (e.g. beads_nvim-x9s, bd-15).
+--- Ids look like `<prefix>-<hash>` where prefix may contain letters, digits,
+--- underscores and hyphens (e.g. beads_nvim-x9s, bundle-analyzer-v2y, bd-15).
 ---@param word string|nil
 ---@return string|nil
 function M.match_issue_id(word)
   if not word or word == "" then
     return nil
   end
-  return word:match("([%a][%w_]*%-%w+)")
+  -- greedy class + backtracking pins the hash to the last hyphen segment,
+  -- so multi-hyphen prefixes match in full instead of truncating
+  return word:match("([%a][%w_-]*%-%w+)")
 end
 
 --- Build argv tail for `bd list`.
