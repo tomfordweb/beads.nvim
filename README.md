@@ -98,9 +98,9 @@ Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 | `s` / `p` | set status / priority |
 | `c` / `o` | close / reopen |
 | `gd` or `<CR>` | jump to dependency under cursor |
-| `<BS>` | back through jump history |
+| `<BS>` | back through jump history, then back to the picker |
 | `R` | refresh |
-| `q` / `<Esc>` | close |
+| `q` / `<Esc>` | close (returns to the picker when opened from it) |
 
 ## Tests
 

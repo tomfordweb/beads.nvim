@@ -8,17 +8,30 @@ local render = require("beads.render")
 
 local M = {}
 
--- One reusable float. history holds previously viewed ids for <BS>.
-local state = { win = nil, buf = nil, issue = nil, history = {} }
+-- One reusable float. history holds previously viewed ids for <BS>;
+-- on_close (when set by the caller, e.g. the picker) runs after the float
+-- closes so the user lands back where they came from.
+local state = { win = nil, buf = nil, issue = nil, history = {}, on_close = nil }
 
-local function close_win()
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
-    vim.api.nvim_win_close(state.win, true)
-  end
+local function reset_state()
+  local cb = state.on_close
   state.win = nil
   state.buf = nil
   state.issue = nil
   state.history = {}
+  state.on_close = nil
+  if cb then
+    vim.schedule(cb)
+  end
+end
+
+local function close_win()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    -- WinClosed autocmd runs reset_state (and the on_close resume)
+    vim.api.nvim_win_close(state.win, true)
+  else
+    reset_state()
+  end
 end
 
 local function is_open()
@@ -91,6 +104,10 @@ local function history_back()
   local prev = table.remove(state.history)
   if prev then
     M.open(prev)
+  else
+    -- nothing left to pop: back out of the view entirely (resumes the
+    -- picker when the view was opened from it)
+    close_win()
   end
 end
 
@@ -180,18 +197,14 @@ local function ensure_float(id)
   vim.api.nvim_create_autocmd("WinClosed", {
     pattern = tostring(state.win),
     once = true,
-    callback = function()
-      state.win = nil
-      state.buf = nil
-      state.issue = nil
-      state.history = {}
-    end,
+    callback = reset_state,
   })
 end
 
 --- Open (or re-render) the detail float for an issue id.
 ---@param id string
-function M.open(id)
+---@param opts { on_close: fun()|nil }|nil on_close runs after the float closes
+function M.open(id, opts)
   render.define_highlights()
   cli.run_json({ "show", id }, function(ok, result)
     if not ok or not result or not result[1] then
@@ -201,6 +214,9 @@ function M.open(id)
       return
     end
     ensure_float(id)
+    if opts and opts.on_close then
+      state.on_close = opts.on_close
+    end
     set_content(issues.normalize(result[1]))
   end)
 end

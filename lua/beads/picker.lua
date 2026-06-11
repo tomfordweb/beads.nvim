@@ -106,7 +106,7 @@ local function title_for(filters, source)
 end
 
 --- Open the issue browser.
----@param opts { source: "list"|"ready"|nil, filters: table|nil }|nil
+---@param opts { source: "list"|"ready"|nil, filters: table|nil, default_text: string|nil }|nil
 function M.open(opts)
   opts = opts or {}
   local source = opts.source or "list"
@@ -131,14 +131,15 @@ function M.open(opts)
     for _, r in ipairs(raw) do
       table.insert(all_issues, issues.normalize(r))
     end
-    M._open_picker(all_issues, filters, source)
+    M._open_picker(all_issues, filters, source, { default_text = opts.default_text })
   end)
 end
 
 ---@param all_issues table[]
 ---@param filters table
 ---@param source string
-function M._open_picker(all_issues, filters, source)
+---@param picker_opts { default_text: string|nil }|nil
+function M._open_picker(all_issues, filters, source, picker_opts)
   local pickers = require("telescope.pickers")
   local finders = require("telescope.finders")
   local conf = require("telescope.config").values
@@ -174,15 +175,25 @@ function M._open_picker(all_issues, filters, source)
   pickers
     .new(theme, {
       prompt_title = title_for(filters, source),
+      default_text = picker_opts and picker_opts.default_text or nil,
       finder = make_finder(),
       sorter = conf.generic_sorter({}),
       previewer = issue_previewer(),
       attach_mappings = function(prompt_bufnr, map)
         actions.select_default:replace(function()
           local entry = action_state.get_selected_entry()
+          local p = action_state.get_current_picker(prompt_bufnr)
+          local prompt = p and p:_get_prompt() or ""
           actions.close(prompt_bufnr)
           if entry then
-            require("beads.view").open(entry.value.id)
+            require("beads.view").open(entry.value.id, {
+              -- closing the view (q / <Esc> / <BS> with empty history)
+              -- lands back in the picker: same filters and prompt, fresh
+              -- fetch so status/priority edits made in the view show up
+              on_close = function()
+                M.open({ source = source, filters = filters, default_text = prompt })
+              end,
+            })
           end
         end)
 
