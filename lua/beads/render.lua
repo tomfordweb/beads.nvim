@@ -99,6 +99,9 @@ function M.detail_lines(issue, comments, children)
   local lines, hls = {}, {}
 
   add_line(lines, hls, ("# %s"):format(issue.title), "BeadsTitle")
+  if issue.id and issue.id ~= "" then
+    add_line(lines, hls, issue.id, "BeadsId")
+  end
   add_line(
     lines,
     hls,
@@ -344,6 +347,7 @@ end
 function M.define_highlights()
   local links = {
     BeadsTitle = "Title",
+    BeadsId = "Identifier",
     BeadsMeta = "Comment",
     BeadsSection = "Function",
     BeadsHelp = "NonText",

@@ -45,11 +45,27 @@ describe("render.detail_lines", function()
     local issue = issues.normalize(fixtures.show_issue)
     local lines = render.detail_lines(issue)
     assert.equals("# Phase 2: render module + picker", lines[1])
-    assert.is_truthy(lines[2]:match("in_progress"))
-    assert.is_truthy(lines[2]:match("P2"))
+    -- M12: issue id is prominent in the body header, right under the title
+    assert.equals("beads_nvim-hcl", lines[2])
+    assert.is_truthy(lines[3]:match("in_progress"))
+    assert.is_truthy(lines[3]:match("P2"))
     assert.is_truthy(find_line(lines, "^## Description"))
     assert.is_truthy(find_line(lines, "Build the telescope picker%."))
     assert.is_truthy(find_line(lines, "With filter cycling%."))
+  end)
+
+  it("highlights the header id line with BeadsId (M12)", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines, hls = render.detail_lines(issue)
+    local id_lnum = select(1, find_line(lines, "^beads_nvim%-hcl$"))
+    assert.is_truthy(id_lnum, "id line present in header")
+    local found = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsId" and h.lnum == id_lnum - 1 then
+        found = true
+      end
+    end
+    assert.is_true(found, "id line carries BeadsId highlight")
   end)
 
   it("renders dep ids as standalone cWORDs", function()
