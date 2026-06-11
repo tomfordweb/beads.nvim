@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: the test workflow only reads the repo.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: nvim ${{ matrix.nvim }}
@@ -14,22 +18,22 @@ jobs:
       matrix:
         nvim: [stable, nightly]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install Neovim
-        uses: rhysd/action-setup-vim@v1
+        uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
         with:
           neovim: true
           version: ${{ matrix.nvim }}
 
       - name: Check out plenary.nvim
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: nvim-lua/plenary.nvim
           path: .deps/plenary.nvim
 
       - name: Check out telescope.nvim
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: nvim-telescope/telescope.nvim
           path: .deps/telescope.nvim
@@ -38,15 +42,15 @@ jobs:
       # self-skips (see tests/integration_spec.lua). Never fail the job on this.
       - name: Install bd (beads) — best effort
         continue-on-error: true
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: stable
 
       - name: go install bd — best effort
         continue-on-error: true
         run: |
-          go install github.com/gastownhall/beads/cmd/bd@latest \
-            || go install github.com/gastownhall/beads@latest \
+          go install github.com/gastownhall/beads/cmd/bd@v1.0.4 \
+            || go install github.com/gastownhall/beads@v1.0.4 \
             || echo "bd install skipped; integration suite will be skipped"
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
