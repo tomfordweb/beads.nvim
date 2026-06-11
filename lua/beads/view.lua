@@ -53,14 +53,18 @@ local function layout()
       and vim.api.nvim_buf_is_valid(state.buf)
       and vim.api.nvim_buf_line_count(state.buf)
     or 24
-  local view_w = float.dims("view").width or 96
+  -- width/height resolve config percentages (e.g. 0.8) or absolutes; the
+  -- height fallback is content-sized so an unconfigured view hugs its content.
+  local view_w = float.width("view", 96)
+  local view_h = float.height("view", count + 1)
   local side_cfg = config.get().sidebar
+  local side_pref = float.resolve_dim(side_cfg.width, vim.o.columns) or 34
   if not state.sidebar_visible then
-    return float.center(view_w, count + 1), nil
+    return float.center(view_w, view_h), nil
   end
   local gap = 2 -- the two floats' facing borders
-  local pair = float.center(view_w + (side_cfg.width or 34) + gap, count + 1)
-  local side_w = math.min(side_cfg.width or 34, math.max(10, pair.width - 40))
+  local pair = float.center(view_w + side_pref + gap, view_h)
+  local side_w = math.min(side_pref, math.max(10, pair.width - 40))
   local main_w = pair.width - side_w - gap
   local main = { relative = "editor", row = pair.row, height = pair.height, width = main_w }
   local sb = { relative = "editor", row = pair.row, height = pair.height, width = side_w }

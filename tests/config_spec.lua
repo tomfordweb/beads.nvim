@@ -28,8 +28,8 @@ describe("beads.config", function()
       local cfg = config.get()
       assert.equals("dropdown", cfg.picker.theme)
       assert.equals(70, cfg.float.edit.width)
-      assert.equals(20, cfg.float.edit.height) -- untouched default survives
-      assert.equals(96, cfg.float.view.width)
+      assert.equals(0.6, cfg.float.edit.height) -- untouched default survives
+      assert.equals(0.8, cfg.float.view.width)
     end)
 
     it("partial mappings override keeps sibling defaults", function()

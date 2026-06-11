@@ -117,12 +117,15 @@ require("beads").setup({
     deps_up = "↑",          -- "blocked by N" column arrow
   },
 
+  -- Float sizes. width/height accept a fraction (0–1 = % of the editor), a
+  -- "<n>%" string, or an absolute cell count (>1). Unset heights stay
+  -- content-sized.
   float = {
-    border = "rounded",     -- any nvim_open_win border
-    view = { width = 96 },  -- heights are content-sized
-    edit = { width = 90, height = 20 },  -- also the memory edit float
-    palette = { width = 100 },
-    graph = { width = 110 },
+    border = "rounded",                  -- any nvim_open_win border
+    view = { width = 0.8, height = 0.8 },
+    edit = { width = 0.7, height = 0.6 },-- also the memory edit float
+    palette = { width = 0.7 },           -- height content-sized
+    graph = { width = 0.8 },             -- height content-sized
   },
 
   -- linked-issues sidebar next to the detail view

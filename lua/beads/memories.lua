@@ -37,8 +37,7 @@ function M.edit(key, value)
   local name = ("beads://memory/%s"):format(key)
 
   local function geometry()
-    local dims = float.dims("edit")
-    return float.center(dims.width or 90, dims.height or 20)
+    return float.center(float.width("edit", 90), float.height("edit", 20))
   end
 
   local function open_float(buf)

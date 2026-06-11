@@ -130,7 +130,7 @@ function M.open(id)
     vim.bo[buf].modifiable = false
 
     local function geometry()
-      return float.center(float.dims("palette").width or 100, #lines + 1)
+      return float.center(float.width("palette", 100), float.height("palette", #lines + 1))
     end
     local win = vim.api.nvim_open_win(
       buf,

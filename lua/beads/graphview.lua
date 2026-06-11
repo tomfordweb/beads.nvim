@@ -34,7 +34,7 @@ function M.open(id)
     float.apply_highlights(buf, "beads_graph", render.link_spans(lines))
 
     local function geometry()
-      return float.center(float.dims("graph").width or 110, #lines + 1)
+      return float.center(float.width("graph", 110), float.height("graph", #lines + 1))
     end
     local win = vim.api.nvim_open_win(
       buf,

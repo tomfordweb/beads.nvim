@@ -27,6 +27,47 @@ function M.dims(kind)
   return require("beads.config").get().float[kind] or {}
 end
 
+--- Resolve a configured dimension to absolute cells against a total extent.
+--- Accepts: a fraction 0 < n <= 1 (percentage of `total`), a "<n>%" string,
+--- or an absolute count > 1. nil/invalid -> nil (caller supplies a fallback).
+---@param value number|string|nil
+---@param total integer editor columns (width) or lines (height)
+---@return integer|nil
+function M.resolve_dim(value, total)
+  if type(value) == "string" then
+    local pct = value:match("^%s*(%d+%.?%d*)%s*%%%s*$")
+    if pct then
+      return math.max(1, math.floor(total * tonumber(pct) / 100))
+    end
+    value = tonumber(value)
+  end
+  if type(value) ~= "number" then
+    return nil
+  end
+  if value > 0 and value <= 1 then
+    return math.max(1, math.floor(total * value))
+  end
+  return math.max(1, math.floor(value))
+end
+
+--- Resolved width for a float kind (config % / fraction / absolute), or
+--- `fallback` when unset.
+---@param kind string
+---@param fallback integer
+---@return integer
+function M.width(kind, fallback)
+  return M.resolve_dim(M.dims(kind).width, vim.o.columns) or fallback
+end
+
+--- Resolved height for a float kind, or `fallback` (callers pass the
+--- content-sized height so unconfigured floats stay content-sized).
+---@param kind string
+---@param fallback integer
+---@return integer
+function M.height(kind, fallback)
+  return M.resolve_dim(M.dims(kind).height, vim.o.lines) or fallback
+end
+
 --- Configured border style.
 ---@return string|table
 function M.border()

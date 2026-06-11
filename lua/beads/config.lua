@@ -101,12 +101,16 @@ local defaults = {
     deps_down = "↓",
     deps_up = "↑",
   },
+  -- Float sizes. width/height accept a fraction (0–1 = % of the editor), a
+  -- "<n>%" string, or an absolute cell count (>1). Heights left unset stay
+  -- content-sized. Percentage defaults keep the floats a sensible, consistent
+  -- size across terminal dimensions.
   float = {
     border = "rounded",
-    view = { width = 96 },
-    edit = { width = 90, height = 20 }, -- also used by the memory edit float
-    palette = { width = 100 },
-    graph = { width = 110 },
+    view = { width = 0.8, height = 0.8 },
+    edit = { width = 0.7, height = 0.6 }, -- also used by the memory edit float
+    palette = { width = 0.7 }, -- content-sized height
+    graph = { width = 0.8 }, -- content-sized height
   },
   -- linked-issues sidebar next to the detail view
   sidebar = {

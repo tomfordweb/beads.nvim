@@ -8,8 +8,7 @@ local util = require("beads.util")
 local M = {}
 
 local function geometry()
-  local dims = float.dims("edit")
-  return float.center(dims.width or 90, dims.height or 20)
+  return float.center(float.width("edit", 90), float.height("edit", 20))
 end
 
 -- The detail view is a float, and floats cannot be split — the edit buffer
