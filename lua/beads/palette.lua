@@ -7,10 +7,15 @@ local render = require("beads.render")
 
 local M = {}
 
+---@class BeadsPaletteInput
+---@field prompt string vim.ui.input prompt
+---@field default string|nil prefilled value
+
 ---@class BeadsPaletteCommand
 ---@field label string shown in the selector
 ---@field args string[] bd argv tail
 ---@field confirm boolean|nil ask before running
+---@field inputs BeadsPaletteInput[]|nil values to gather (appended to args)
 
 ---@type BeadsPaletteCommand[]
 M.commands = {
@@ -22,9 +27,22 @@ M.commands = {
     confirm = true,
   },
   { label = "ready — unblocked open issues", args = { "ready" } },
+  { label = "blocked — issues waiting on dependencies", args = { "blocked" } },
   { label = "stale — issues not updated recently", args = { "stale" } },
   { label = "lint — check issues for missing sections", args = { "lint" } },
+  { label = "preflight — pre-PR readiness checks", args = { "preflight" } },
+  { label = "doctor — install / sync health check", args = { "doctor" } },
+  { label = "find-duplicates — detect likely duplicate issues", args = { "find-duplicates" } },
+  { label = "orphans — issues with broken dependencies", args = { "orphans" } },
   { label = "dep cycles — detect dependency cycles", args = { "dep", "cycles" } },
+  {
+    label = "diff — compare issues between two refs",
+    args = { "diff" },
+    inputs = {
+      { prompt = "from ref: ", default = "HEAD~1" },
+      { prompt = "to ref: ", default = "HEAD" },
+    },
+  },
   { label = "count — count open issues", args = { "count" } },
   { label = "init — create .beads db in project dir", args = { "init" }, confirm = true },
 }
@@ -71,6 +89,36 @@ local function show_output(text, title)
   end
 end
 
+---@param args string[] fully-resolved argv tail
+local function dispatch(args)
+  cli.run_plain(args, function(ok, stdout)
+    if ok then
+      show_output(stdout or "", table.concat(args, " "))
+    end
+  end)
+end
+
+--- Gather cmd.inputs sequentially via vim.ui.input, appending each answer to
+--- args, then dispatch. Aborts if any prompt is cancelled (nil). Index-driven
+--- recursion keeps the async prompts ordered.
+---@param args string[]
+---@param inputs BeadsPaletteInput[]
+---@param i integer
+local function gather_inputs(args, inputs, i)
+  if i > #inputs then
+    dispatch(args)
+    return
+  end
+  local spec = inputs[i]
+  vim.ui.input({ prompt = spec.prompt, default = spec.default }, function(value)
+    if value == nil then
+      return
+    end
+    table.insert(args, value)
+    gather_inputs(args, inputs, i + 1)
+  end)
+end
+
 ---@param cmd BeadsPaletteCommand
 local function run_command(cmd)
   if cmd.confirm then
@@ -84,11 +132,12 @@ local function run_command(cmd)
       return
     end
   end
-  cli.run_plain(cmd.args, function(ok, stdout)
-    if ok then
-      show_output(stdout or "", table.concat(cmd.args, " "))
-    end
-  end)
+  local args = vim.deepcopy(cmd.args)
+  if cmd.inputs and #cmd.inputs > 0 then
+    gather_inputs(args, cmd.inputs, 1)
+  else
+    dispatch(args)
+  end
 end
 
 --- Open the bd command palette (vim.ui.select — telescope dropdown when
