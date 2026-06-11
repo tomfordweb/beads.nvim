@@ -1,9 +1,8 @@
 ---@class BeadsKeymaps
----@field list string|false
----@field ready string|false
----@field create string|false
----@field quick string|false
----@field palette string|false
+---@field base string prefix prepended to every menu key (e.g. "<leader>b")
+---@field menus table<string, string|fun()|{ desc: string|nil, fn: fun() }|false>
+--- menu values: builtin action name (see beads.actions), a function, a
+--- { desc, fn } table, or false to disable a default entry
 
 ---@class BeadsConfig
 ---@field bd_bin string
@@ -29,11 +28,15 @@ local defaults = {
 }
 
 local default_keymaps = {
-  list = "<leader>bdl",
-  ready = "<leader>bdr",
-  create = "<leader>bdc",
-  quick = "<leader>bdq",
-  palette = "<leader>bdp",
+  base = "<leader>bd",
+  menus = {
+    l = "browse",
+    o = "open",
+    r = "ready",
+    c = "create",
+    q = "quick",
+    p = "palette",
+  },
 }
 
 local options = vim.deepcopy(defaults)
@@ -44,7 +47,13 @@ function M.setup(opts)
   if options.keymaps == true then
     options.keymaps = vim.deepcopy(default_keymaps)
   elseif type(options.keymaps) == "table" then
-    options.keymaps = vim.tbl_extend("force", vim.deepcopy(default_keymaps), options.keymaps)
+    local user = options.keymaps
+    options.keymaps = {
+      base = user.base or default_keymaps.base,
+      -- user menus replace the defaults wholesale when given; mixing
+      -- defaults into custom single-letter menus surprises more than helps
+      menus = user.menus or vim.deepcopy(default_keymaps.menus),
+    }
   end
 end
 

@@ -7,26 +7,17 @@ function M.setup(opts)
 
   local keymaps = require("beads.config").get().keymaps
   if type(keymaps) == "table" then
-    local function map(lhs, rhs, desc)
-      if lhs then
-        vim.keymap.set("n", lhs, rhs, { desc = "Beads: " .. desc, silent = true })
+    local actions = require("beads.actions")
+    for key, value in pairs(keymaps.menus or {}) do
+      if value ~= false then
+        local fn, desc = actions.resolve(value)
+        if fn then
+          vim.keymap.set("n", keymaps.base .. key, fn, { desc = "Beads: " .. desc, silent = true })
+        else
+          vim.notify(("beads.nvim: unknown keymap action %q for key %q"):format(tostring(value), key), vim.log.levels.WARN)
+        end
       end
     end
-    map(keymaps.list, function()
-      require("beads.picker").open()
-    end, "browse issues")
-    map(keymaps.ready, function()
-      require("beads.picker").open({ source = "ready" })
-    end, "ready work")
-    map(keymaps.create, function()
-      require("beads.create").open_form()
-    end, "create issue")
-    map(keymaps.quick, function()
-      require("beads.create").quick()
-    end, "quick capture")
-    map(keymaps.palette, function()
-      require("beads.palette").open()
-    end, "command palette")
   end
 end
 

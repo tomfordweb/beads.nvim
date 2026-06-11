@@ -58,20 +58,46 @@ require("beads").setup({
   list_limit = 200,         -- bd list -n
   default_filters = { status = nil, priority = nil, type = nil, all = false },
   picker = { theme = "ivy" },
-  keymaps = true,           -- false (default), true, or a table of overrides
+  keymaps = true,           -- false (default), true, or { base, menus }
   palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
 })
 ```
 
-Default keymaps (when `keymaps = true`):
+### Keymaps
 
-| Map | Action |
-|-----|--------|
-| `<leader>bdl` | browse issues |
-| `<leader>bdr` | ready work |
-| `<leader>bdc` | create issue |
-| `<leader>bdq` | quick capture |
-| `<leader>bdp` | command palette |
+Keymaps are a prefix (`base`) plus single-key `menus`. `keymaps = true` is
+shorthand for:
+
+```lua
+keymaps = {
+  base = "<leader>bd",
+  menus = {
+    l = "browse",   -- all non-closed issues
+    o = "open",     -- status:open only
+    r = "ready",    -- unblocked work
+    c = "create",   -- interactive create form
+    q = "quick",    -- quick capture (bd q)
+    p = "palette",  -- command palette
+  },
+}
+```
+
+Menu values are builtin action names, a function, or `{ desc, fn }`:
+
+```lua
+keymaps = {
+  base = "<leader>b",
+  menus = {
+    i = "all",          -- every issue, closed included
+    o = "open",
+    w = "in_progress",
+    x = { desc = "show epic", fn = function() require("beads.view").open("myproj-x9s") end },
+  },
+}
+```
+
+Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
+`closed`, `ready`, `create`, `quick`, `palette`.
 
 ## Usage
 
