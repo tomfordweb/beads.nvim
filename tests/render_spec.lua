@@ -124,6 +124,122 @@ describe("render.detail_lines", function()
   end)
 end)
 
+describe("render.sidebar_lines", function()
+  local DEFAULT_SECTIONS = { "overview", "parent", "children", "depends_on", "blocks" }
+
+  local function build(sections)
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, fixtures.dependents)
+    return render.sidebar_lines(issue, links, { sections = sections or DEFAULT_SECTIONS, width = 34 })
+  end
+
+  local function find_line(lines, pattern)
+    for i, l in ipairs(lines) do
+      if l:match(pattern) then
+        return i, l
+      end
+    end
+    return nil
+  end
+
+  it("renders all populated sections in configured order", function()
+    local lines = build()
+    local overview = find_line(lines, "^Overview$")
+    local parent = find_line(lines, "^Parent$")
+    local children = find_line(lines, "^Children$")
+    local depends = find_line(lines, "^Depends on$")
+    local blocks = find_line(lines, "^Blocks$")
+    assert.is_truthy(overview)
+    assert.is_true(overview < parent and parent < children and children < depends and depends < blocks)
+  end)
+
+  it("respects custom section selection and order", function()
+    local lines = build({ "blocks", "parent" })
+    assert.is_nil(find_line(lines, "^Overview$"))
+    assert.is_nil(find_line(lines, "^Children"))
+    local blocks = find_line(lines, "^Blocks$")
+    local parent = find_line(lines, "^Parent$")
+    assert.is_true(blocks < parent)
+  end)
+
+  it("omits empty sections", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    local links = issues.partition_links(issue, {})
+    local lines = render.sidebar_lines(issue, links, { sections = DEFAULT_SECTIONS, width = 34 })
+    assert.is_nil(find_line(lines, "^Parent$"))
+    assert.is_nil(find_line(lines, "^Children"))
+    assert.is_truthy(find_line(lines, "^Overview$"))
+  end)
+
+  it("counts multi-entry sections in the header", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local two_children = {
+      fixtures.dependents[1],
+      vim.tbl_extend("force", vim.deepcopy(fixtures.dependents[1]), { id = "beads_nvim-u2f.1.2" }),
+    }
+    local links = issues.partition_links(issue, two_children)
+    local lines = render.sidebar_lines(issue, links, { sections = { "children" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Children %(2%)$"))
+  end)
+
+  it("ids are standalone cWORDs with BeadsLink spans", function()
+    local lines, hls = build()
+    local _, entry = find_line(lines, "beads_nvim%-u2f%.1%.1")
+    local found = false
+    for word in entry:gmatch("%S+") do
+      if word == "beads_nvim-u2f.1.1" then
+        found = true
+      end
+    end
+    assert.is_true(found)
+    local linked = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        linked = true
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        assert.equals(span, issues.match_issue_id(span))
+      end
+    end
+    assert.is_true(linked)
+  end)
+
+  it("truncates long titles to the configured width", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local long = {
+      {
+        id = "beads_nvim-l0ng",
+        title = string.rep("very long title ", 10),
+        status = "open",
+        dependency_type = "blocks",
+      },
+    }
+    local links = issues.partition_links(issue, long)
+    local lines = render.sidebar_lines(issue, links, { sections = { "blocks" }, width = 30 })
+    local _, title_line = find_line(lines, "very long")
+    assert.is_true(vim.fn.strdisplaywidth(title_line) <= 30)
+    assert.is_truthy(title_line:find("…"))
+  end)
+
+  it("dims closed entries", function()
+    local lines, hls = build()
+    local closed_lnum = find_line(lines, "beads_nvim%-ay7") - 1
+    local dimmed = false
+    for _, h in ipairs(hls) do
+      if h.lnum == closed_lnum and h.hl_group == "Comment" then
+        dimmed = true
+      end
+    end
+    assert.is_true(dimmed)
+  end)
+
+  it("renders placeholder when nothing to show", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    local links = issues.partition_links(issue, {})
+    local lines = render.sidebar_lines(issue, links, { sections = { "parent", "children" }, width = 34 })
+    assert.are.same({ "(no links)" }, lines)
+  end)
+end)
+
 describe("render.link_spans", function()
   it("links the first id per line, byte-accurate", function()
     local lines = {

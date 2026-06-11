@@ -31,13 +31,7 @@ function M.open(id)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     vim.bo[buf].modifiable = false
 
-    local ns = vim.api.nvim_create_namespace("beads_graph")
-    for _, h in ipairs(render.link_spans(lines)) do
-      vim.api.nvim_buf_set_extmark(buf, ns, h.lnum, h.col_start, {
-        end_col = h.col_end,
-        hl_group = h.hl_group,
-      })
-    end
+    float.apply_highlights(buf, "beads_graph", render.link_spans(lines))
 
     local function geometry()
       return float.center(float.dims("graph").width or 110, #lines + 1)

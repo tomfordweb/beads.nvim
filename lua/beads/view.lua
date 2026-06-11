@@ -6,14 +6,16 @@ local config = require("beads.config")
 local float = require("beads.float")
 local issues = require("beads.issues")
 local render = require("beads.render")
+local sidebar = require("beads.sidebar")
 local util = require("beads.util")
 
 local M = {}
 
 -- One reusable float. history holds previously viewed ids for <BS>;
 -- on_close (when set by the caller, e.g. the picker) runs after the float
--- closes so the user lands back where they came from.
-local state = { win = nil, buf = nil, issue = nil, history = {}, on_close = nil }
+-- closes so the user lands back where they came from. sidebar_visible
+-- persists across dep jumps within one view session.
+local state = { win = nil, buf = nil, issue = nil, history = {}, on_close = nil, sidebar_visible = nil }
 
 local function reset_state()
   local cb = state.on_close
@@ -22,6 +24,8 @@ local function reset_state()
   state.issue = nil
   state.history = {}
   state.on_close = nil
+  state.sidebar_visible = nil
+  sidebar.close()
   if cb then
     vim.schedule(cb)
   end
@@ -40,24 +44,45 @@ local function is_open()
   return state.win ~= nil and vim.api.nvim_win_is_valid(state.win)
 end
 
-local function apply_highlights(buf, hls)
-  local ns = vim.api.nvim_create_namespace("beads_view")
-  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-  for _, h in ipairs(hls) do
-    vim.api.nvim_buf_set_extmark(buf, ns, h.lnum, h.col_start, {
-      end_row = h.col_end == -1 and h.lnum + 1 or h.lnum,
-      end_col = h.col_end == -1 and 0 or h.col_end,
-      hl_group = h.hl_group,
-      hl_eol = h.col_end == -1,
-    })
+-- Geometry for the view float and (when visible) the sidebar beside it,
+-- centered together as one unit. Returns main, sidebar (sidebar nil when
+-- hidden). Shrinks the sidebar first on narrow screens.
+local function layout()
+  local count = state.buf and vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_buf_line_count(state.buf) or 24
+  local view_w = float.dims("view").width or 96
+  local side_cfg = config.get().sidebar
+  if not state.sidebar_visible then
+    return float.center(view_w, count + 1), nil
   end
+  local gap = 2 -- the two floats' facing borders
+  local pair = float.center(view_w + (side_cfg.width or 34) + gap, count + 1)
+  local side_w = math.min(side_cfg.width or 34, math.max(10, pair.width - 40))
+  local main_w = pair.width - side_w - gap
+  local main = { relative = "editor", row = pair.row, height = pair.height, width = main_w }
+  local sb = { relative = "editor", row = pair.row, height = pair.height, width = side_w }
+  if side_cfg.position == "left" then
+    sb.col = pair.col
+    main.col = pair.col + side_w + gap
+  else
+    main.col = pair.col
+    sb.col = pair.col + main_w + gap
+  end
+  return main, sb
 end
 
--- Content-sized centered geometry for the current buffer.
+-- Main-float geometry; repositions (or closes) the sidebar as a side effect
+-- so set_content and the VimResized recompute keep the pair in sync.
 local function win_geometry()
-  local count = state.buf and vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_buf_line_count(state.buf) or 24
-  return float.center(float.dims("view").width or 96, count + 1)
+  local main, sb = layout()
+  if sb then
+    sidebar.reposition(sb)
+  elseif sidebar.is_open() then
+    sidebar.close()
+  end
+  return main
 end
+
+local update_sidebar -- defined below; needs the jump/back helpers
 
 local function set_content(issue, comments)
   state.issue = issue
@@ -67,7 +92,7 @@ local function set_content(issue, comments)
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
   vim.bo[state.buf].filetype = "markdown"
-  apply_highlights(state.buf, hls)
+  float.apply_highlights(state.buf, "beads_view", hls)
 
   if is_open() then
     vim.api.nvim_win_set_config(
@@ -75,6 +100,7 @@ local function set_content(issue, comments)
       float.decorate(win_geometry(), { title = " " .. issue.id .. " ", pane = "view" })
     )
   end
+  update_sidebar(issue)
 end
 
 local function update_and_rerender(args, msg, action)
@@ -94,8 +120,7 @@ local function update_and_rerender(args, msg, action)
   end)
 end
 
-local function dep_jump()
-  local id = issues.match_issue_id(vim.fn.expand("<cWORD>"))
+local function jump_to(id)
   if not id or (state.issue and id == state.issue.id) then
     return
   end
@@ -103,6 +128,10 @@ local function dep_jump()
     table.insert(state.history, state.issue.id)
   end
   M.open(id)
+end
+
+local function dep_jump()
+  jump_to(issues.match_issue_id(vim.fn.expand("<cWORD>")))
 end
 
 local function history_back()
@@ -114,6 +143,60 @@ local function history_back()
     -- picker when the view was opened from it)
     close_win()
   end
+end
+
+local sidebar_callbacks = {
+  jump = jump_to,
+  focus_view = function()
+    if is_open() then
+      vim.api.nvim_set_current_win(state.win)
+    end
+  end,
+  back = history_back,
+  quit = close_win,
+}
+
+-- Fetch dependents and (re)render the sidebar for the shown issue.
+update_sidebar = function(issue, focus)
+  if not state.sidebar_visible then
+    return
+  end
+  cli.run_json({ "dep", "list", issue.id, "--direction=up" }, function(ok, dependents)
+    if not is_open() or not state.issue or state.issue.id ~= issue.id then
+      return
+    end
+    local links = issues.partition_links(issue, ok and dependents or {})
+    local _, sb = layout()
+    if sb then
+      sidebar.open(issue, links, sb, sidebar_callbacks)
+      if focus then
+        sidebar.focus()
+      end
+    end
+  end)
+end
+
+local function reapply_main_geometry()
+  if is_open() and state.issue then
+    vim.api.nvim_win_set_config(
+      state.win,
+      float.decorate(win_geometry(), { title = " " .. state.issue.id .. " ", pane = "view" })
+    )
+  end
+end
+
+local function show_sidebar(focus)
+  state.sidebar_visible = true
+  reapply_main_geometry()
+  if state.issue then
+    update_sidebar(state.issue, focus)
+  end
+end
+
+local function hide_sidebar()
+  state.sidebar_visible = false
+  sidebar.close()
+  reapply_main_geometry()
 end
 
 -- Handlers for the configurable view mappings (config.mappings.view).
@@ -205,6 +288,26 @@ local handlers = {
   },
   jump = { desc = "jump to dependency", fn = dep_jump },
   back = { desc = "back", fn = history_back },
+  sidebar = {
+    desc = "focus links sidebar",
+    fn = function()
+      if sidebar.is_open() then
+        sidebar.focus()
+      else
+        show_sidebar(true)
+      end
+    end,
+  },
+  sidebar_toggle = {
+    desc = "toggle links sidebar",
+    fn = function()
+      if state.sidebar_visible then
+        hide_sidebar()
+      else
+        show_sidebar(false)
+      end
+    end,
+  },
   refresh = {
     desc = "refresh",
     fn = function()
@@ -226,6 +329,9 @@ local function ensure_float(id)
   if is_open() then
     return
   end
+  if state.sidebar_visible == nil then
+    state.sidebar_visible = config.get().sidebar.enabled
+  end
   state.buf = vim.api.nvim_create_buf(false, true)
   vim.bo[state.buf].buftype = "nofile"
   vim.bo[state.buf].bufhidden = "wipe"
@@ -233,7 +339,7 @@ local function ensure_float(id)
   state.win = vim.api.nvim_open_win(
     state.buf,
     true,
-    float.decorate(float.center(float.dims("view").width or 96, 24), {
+    float.decorate(win_geometry(), {
       title = " " .. id .. " ",
       pane = "view",
       style = "minimal",

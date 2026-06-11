@@ -22,6 +22,7 @@
 ---@field mappings BeadsMappings
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
+---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[] }
 ---@field helpbar boolean
 ---@field notify boolean
 ---@field palette { extra: table[] }
@@ -63,6 +64,14 @@ local defaults = {
       back = "<BS>",
       refresh = "R",
       quit = { "q", "<Esc>" },
+      sidebar = "<Tab>",
+      sidebar_toggle = "gs",
+    },
+    sidebar = {
+      jump = { "gd", "<CR>" },
+      focus_view = "<Tab>",
+      back = "<BS>",
+      quit = { "q", "<Esc>" },
     },
     memories = {
       edit = "<CR>",
@@ -86,6 +95,14 @@ local defaults = {
     edit = { width = 90, height = 20 }, -- also used by the memory edit float
     palette = { width = 100 },
     graph = { width = 110 },
+  },
+  -- linked-issues sidebar next to the detail view
+  sidebar = {
+    enabled = true, -- open automatically with the detail view
+    width = 34,
+    position = "right", -- "left"
+    -- section order; remove entries to hide them
+    sections = { "overview", "parent", "children", "depends_on", "blocks" },
   },
   helpbar = true,
   notify = true,

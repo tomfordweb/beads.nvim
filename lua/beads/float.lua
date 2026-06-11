@@ -58,6 +58,24 @@ function M.decorate(cfg, opts)
   return cfg
 end
 
+--- Apply {lnum, col_start, col_end, hl_group} specs (0-indexed, col_end = -1
+--- for whole line) as extmarks in a named namespace, clearing it first.
+---@param buf integer
+---@param ns_name string
+---@param hls table[]
+function M.apply_highlights(buf, ns_name, hls)
+  local ns = vim.api.nvim_create_namespace(ns_name)
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  for _, h in ipairs(hls) do
+    vim.api.nvim_buf_set_extmark(buf, ns, h.lnum, h.col_start, {
+      end_row = h.col_end == -1 and h.lnum + 1 or h.lnum,
+      end_col = h.col_end == -1 and 0 or h.col_end,
+      hl_group = h.hl_group,
+      hl_eol = h.col_end == -1,
+    })
+  end
+end
+
 --- Re-apply geometry from `recompute` on every VimResized until the
 --- window closes.
 ---@param win integer

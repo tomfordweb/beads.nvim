@@ -164,6 +164,108 @@ function M.detail_lines(issue, comments)
   return lines, hls
 end
 
+---@param s string
+---@param width integer
+---@return string
+local function truncate(s, width)
+  if vim.fn.strdisplaywidth(s) <= width then
+    return s
+  end
+  return vim.fn.strcharpart(s, 0, math.max(1, width - 1)) .. "…"
+end
+
+--- One linked issue as two sidebar lines: " <icon> <id>" with the id
+--- link-styled, then the truncated title indented beneath.
+local function add_link_entry(lines, hls, entry, width)
+  local text = (" %s %s"):format(issues.status_icon(entry.status), entry.id)
+  add_line(lines, hls, text, entry.status == "closed" and "Comment" or nil)
+  local id_start = text:find(entry.id, 1, true)
+  if id_start then
+    -- layered after the line highlight, same as detail_lines dep ids
+    table.insert(hls, {
+      lnum = #lines - 1,
+      col_start = id_start - 1,
+      col_end = id_start - 1 + #entry.id,
+      hl_group = "BeadsLink",
+    })
+  end
+  if entry.title and entry.title ~= "" then
+    add_line(lines, hls, "   " .. truncate(entry.title, width - 4), "BeadsMeta")
+  end
+end
+
+local SIDEBAR_TITLES = {
+  parent = "Parent",
+  children = "Children",
+  depends_on = "Depends on",
+  blocks = "Blocks",
+}
+
+--- Render the linked-issues sidebar. Sections come from opts.sections (order
+--- preserved, empty ones omitted). Ids are standalone WORDs so <cWORD>
+--- dep-jump works. Pure.
+---@param issue table normalized issue
+---@param links { parent: table|nil, children: table[], depends_on: table[], blocks: table[] }
+---@param opts { sections: string[], width: integer }
+---@return string[] lines, table[] highlights
+function M.sidebar_lines(issue, links, opts)
+  local width = opts.width or 34
+  local lines, hls = {}, {}
+
+  local function blank_separator()
+    if #lines > 0 then
+      add_line(lines, hls, "")
+    end
+  end
+
+  for _, section in ipairs(opts.sections or {}) do
+    if section == "overview" then
+      blank_separator()
+      add_line(lines, hls, "Overview", "BeadsSection")
+      add_line(
+        lines,
+        hls,
+        (" %s %s  %s %s"):format(
+          issues.status_icon(issue.status),
+          issue.status,
+          issues.priority_label(issue.priority),
+          issue.issue_type
+        ),
+        M.status_hl(issue.status)
+      )
+      if issue.assignee and issue.assignee ~= "" then
+        add_line(lines, hls, truncate(" assignee: " .. issue.assignee, width), "BeadsMeta")
+      end
+      if #issue.labels > 0 then
+        add_line(lines, hls, truncate(" labels: " .. table.concat(issue.labels, ", "), width), "BeadsMeta")
+      end
+      add_line(lines, hls, " created " .. short_date(issue.created_at), "BeadsMeta")
+      add_line(lines, hls, " updated " .. short_date(issue.updated_at), "BeadsMeta")
+      if issue.comment_count > 0 then
+        add_line(lines, hls, (" comments: %d"):format(issue.comment_count), "BeadsMeta")
+      end
+    elseif SIDEBAR_TITLES[section] then
+      local entries = section == "parent" and (links.parent and { links.parent } or {}) or links[section] or {}
+      if #entries > 0 then
+        blank_separator()
+        local header = SIDEBAR_TITLES[section]
+        if #entries > 1 then
+          header = ("%s (%d)"):format(header, #entries)
+        end
+        add_line(lines, hls, header, "BeadsSection")
+        for _, entry in ipairs(entries) do
+          add_link_entry(lines, hls, entry, width)
+        end
+      end
+    end
+  end
+
+  if #lines == 0 then
+    add_line(lines, hls, "(no links)", "BeadsMeta")
+  end
+  return lines, hls
+end
+
 --- Link-style highlight tuple for the first issue id on each line.
 --- Intended for surfaces with one id per line (bd graph output); issue
 --- titles may contain hyphenated words, so later matches are skipped to

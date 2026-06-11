@@ -44,8 +44,16 @@ M.PANES = {
     { action = "reopen", label = "reopen" },
     { action = "graph", label = "graph" },
     { action = "jump", label = "dep-jump" },
+    { action = "sidebar", label = "links" },
     { action = "back", label = "back" },
     { action = "refresh", label = "refresh" },
+    { action = "quit", label = "quit" },
+  },
+  sidebar = {
+    group = "sidebar",
+    { action = "jump", label = "open" },
+    { action = "focus_view", label = "view" },
+    { action = "back", label = "history" },
     { action = "quit", label = "quit" },
   },
   memories = {

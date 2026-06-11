@@ -186,6 +186,37 @@ function M.normalize(raw)
   }
 end
 
+--- Split an issue's links into sidebar sections. `issue.dependencies` (from
+--- bd show) holds what this issue depends on — a parent-child entry there is
+--- the parent. `dependents` (from `bd dep list <id> --direction=up`) holds
+--- what depends on this issue — parent-child entries there are children,
+--- everything else is blocked by this issue. Entries are normalized. Pure.
+---@param issue table normalized issue
+---@param dependents table[]|nil raw entries from dep list --direction=up
+---@return { parent: table|nil, children: table[], depends_on: table[], blocks: table[] }
+function M.partition_links(issue, dependents)
+  local links = { parent = nil, children = {}, depends_on = {}, blocks = {} }
+  for _, dep in ipairs(issue.dependencies or {}) do
+    local n = M.normalize(dep)
+    n.dependency_type = dep.dependency_type
+    if dep.dependency_type == "parent-child" then
+      links.parent = links.parent or n
+    else
+      table.insert(links.depends_on, n)
+    end
+  end
+  for _, dep in ipairs(dependents or {}) do
+    local n = M.normalize(dep)
+    n.dependency_type = dep.dependency_type
+    if dep.dependency_type == "parent-child" then
+      table.insert(links.children, n)
+    else
+      table.insert(links.blocks, n)
+    end
+  end
+  return links
+end
+
 --- Client-side filter predicate matching the picker's active filters.
 ---@param issue table normalized issue
 ---@param filters { status: string|nil, priority: integer|nil, type: string|nil, all: boolean|nil }

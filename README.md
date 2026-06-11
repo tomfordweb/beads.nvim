@@ -16,6 +16,10 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
 - **Detail view** — floating window with full fields and dependencies.
   Change status/priority, close/reopen, and jump through dependency ids
   (`gd` / `<CR>`) with `<BS>` history.
+- **Links sidebar** — companion pane beside the detail view: overview
+  (status/priority/assignee/labels/dates) plus parent, children, depends-on
+  and blocks sections, every id jumpable. `<Tab>` switches panes, `gs`
+  toggles it.
 - **Description editing** — `e` opens the description in a markdown buffer;
   `:w` persists via `bd update --body-file -`.
 - **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
@@ -88,7 +92,9 @@ require("beads").setup({
   mappings = {
     picker   = { open = "<CR>", status = "<C-s>", priority = "<C-y>", type = "<C-t>", closed = "<C-a>", refetch = "<C-r>" },
     view     = { edit = "e", status = "s", priority = "p", comment = "a", close = "c", reopen = "o",
-                 graph = "D", jump = { "gd", "<CR>" }, back = "<BS>", refresh = "R", quit = { "q", "<Esc>" } },
+                 graph = "D", jump = { "gd", "<CR>" }, back = "<BS>", refresh = "R", quit = { "q", "<Esc>" },
+                 sidebar = "<Tab>", sidebar_toggle = "gs" },
+    sidebar  = { jump = { "gd", "<CR>" }, focus_view = "<Tab>", back = "<BS>", quit = { "q", "<Esc>" } },
     memories = { edit = "<CR>", new = "<C-n>", forget = "<C-d>", refetch = "<C-r>" },
     graph    = { jump = { "gd", "<CR>" }, quit = { "q", "<Esc>" } },
   },
@@ -107,11 +113,34 @@ require("beads").setup({
     graph = { width = 110 },
   },
 
+  -- linked-issues sidebar next to the detail view
+  sidebar = {
+    enabled = true,         -- false: hidden until summoned with gs / <Tab>
+    width = 34,
+    position = "right",     -- "left"
+    -- section order; remove entries to hide them
+    sections = { "overview", "parent", "children", "depends_on", "blocks" },
+  },
+
   helpbar = true,           -- false: no keybind footers / prompt-title help
   notify = true,            -- false: silence success messages (errors always shown)
   palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
 })
 ```
+
+#### Customizing the sidebar
+
+- `sidebar.enabled = false` makes it on-demand: `gs` (or `<Tab>`) in the
+  detail view summons it; the visibility choice then sticks while you jump
+  around, until the view closes.
+- Reorder or drop `sections` — e.g. `{ "children", "depends_on", "blocks" }`
+  skips the overview block entirely.
+- `width`/`position` resize and flip it; on narrow terminals the sidebar
+  shrinks before the detail view does.
+- Remap pane keys via `mappings.view.sidebar` / `mappings.view.sidebar_toggle`
+  / `mappings.sidebar` (set a value to `false` to disable that key).
+- It reuses `BeadsLink`, `BeadsSection`, `BeadsMeta` and the status highlight
+  groups, so colorscheme overrides apply automatically.
 
 The same table can be passed through telescope instead (merges with
 `setup()`, either order):
@@ -222,9 +251,20 @@ beads|ready|search|memories`.
 | `c` / `o` | close / reopen |
 | `D` | dependency graph float |
 | `gd` or `<CR>` | jump to dependency under cursor |
+| `<Tab>` | focus the links sidebar (opens it if hidden) |
+| `gs` | toggle the links sidebar |
 | `<BS>` | back through jump history, then back to the picker |
 | `R` | refresh |
 | `q` / `<Esc>` | close (returns to the picker when opened from it) |
+
+### Sidebar mappings
+
+| Key | Action |
+|-----|--------|
+| `gd` or `<CR>` | open the issue under cursor in the detail view |
+| `<Tab>` | focus back to the detail view |
+| `<BS>` | back through jump history |
+| `q` / `<Esc>` | close the detail view (sidebar included) |
 
 ### Memories picker mappings
 

@@ -67,6 +67,17 @@ describe("beads.helpbar", function()
     assert.is_truthy(line:find("<C-y> prio", 1, true))
   end)
 
+  it("view pane advertises the sidebar key", function()
+    assert.is_truthy(helpbar.line("view"):find("<Tab> links", 1, true))
+  end)
+
+  it("sidebar pane resolves its mapping group", function()
+    local line = helpbar.line("sidebar")
+    assert.is_truthy(line:find("gd open", 1, true))
+    assert.is_truthy(line:find("<Tab> view", 1, true))
+    assert.is_truthy(line:find("q quit", 1, true))
+  end)
+
   it("helpbar = false suppresses line and footer", function()
     config.setup({ helpbar = false })
     assert.equals("", helpbar.line("view"))

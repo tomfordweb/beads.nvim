@@ -51,6 +51,26 @@ describe("beads.config", function()
       assert.are.same({}, config.lhs(config.get().mappings.picker.status))
     end)
 
+    it("ships sidebar defaults", function()
+      config.setup({})
+      local sb = config.get().sidebar
+      assert.is_true(sb.enabled)
+      assert.equals(34, sb.width)
+      assert.equals("right", sb.position)
+      assert.are.same({ "overview", "parent", "children", "depends_on", "blocks" }, sb.sections)
+      assert.equals("<Tab>", config.get().mappings.view.sidebar)
+      assert.equals("gs", config.get().mappings.view.sidebar_toggle)
+      assert.equals("<Tab>", config.get().mappings.sidebar.focus_view)
+    end)
+
+    it("sidebar partial override keeps siblings", function()
+      config.setup({ sidebar = { width = 50 }, mappings = { sidebar = { quit = "x" } } })
+      assert.equals(50, config.get().sidebar.width)
+      assert.is_true(config.get().sidebar.enabled)
+      assert.equals("x", config.get().mappings.sidebar.quit)
+      assert.equals("<Tab>", config.get().mappings.sidebar.focus_view)
+    end)
+
     it("keymaps = true expands to defaults", function()
       config.setup({ keymaps = true })
       local km = config.get().keymaps

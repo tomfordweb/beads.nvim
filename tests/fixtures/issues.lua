@@ -52,4 +52,59 @@ M.sparse_issue = {
   title = "Phase 5: polish",
 }
 
+-- Shape of `bd show <id> --json` for a child issue: the parent appears in
+-- dependencies as a parent-child entry alongside ordinary blockers.
+M.show_child_issue = {
+  id = "beads_nvim-u2f.1",
+  title = "labels: manage from detail view",
+  status = "open",
+  priority = 2,
+  issue_type = "feature",
+  created_at = "2026-06-11T13:07:33Z",
+  updated_at = "2026-06-11T13:07:33Z",
+  parent = "beads_nvim-u2f",
+  dependencies = {
+    {
+      id = "beads_nvim-u2f",
+      title = "beads.nvim v2",
+      status = "in_progress",
+      priority = 2,
+      issue_type = "epic",
+      dependency_type = "parent-child",
+    },
+    {
+      id = "beads_nvim-ay7",
+      title = "Phase 1: scaffold",
+      status = "closed",
+      priority = 2,
+      issue_type = "task",
+      dependency_type = "blocks",
+    },
+  },
+  dependency_count = 1,
+  dependent_count = 2,
+  comment_count = 3,
+}
+
+-- Shape of `bd dep list <id> --direction=up --json`: full issue objects with
+-- dependency_type; parent-child entries are children, others are blocked.
+M.dependents = {
+  {
+    id = "beads_nvim-u2f.1.1",
+    title = "subtask one",
+    status = "open",
+    priority = 2,
+    issue_type = "task",
+    dependency_type = "parent-child",
+  },
+  {
+    id = "beads_nvim-zz1",
+    title = "blocked downstream work",
+    status = "blocked",
+    priority = 1,
+    issue_type = "feature",
+    dependency_type = "blocks",
+  },
+}
+
 return M
