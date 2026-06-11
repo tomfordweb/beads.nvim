@@ -2,6 +2,7 @@
 -- close/reopen), navigate dependencies in place with history.
 
 local cli = require("beads.cli")
+local float = require("beads.float")
 local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
@@ -51,6 +52,12 @@ local function apply_highlights(buf, hls)
   end
 end
 
+-- Content-sized centered geometry for the current buffer.
+local function win_geometry()
+  local count = state.buf and vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_buf_line_count(state.buf) or 24
+  return float.center(96, count + 1)
+end
+
 local function set_content(issue)
   state.issue = issue
   local lines, hls = render.detail_lines(issue)
@@ -62,14 +69,15 @@ local function set_content(issue)
   apply_highlights(state.buf, hls)
 
   if is_open() then
-    local height = math.min(#lines + 1, vim.o.lines - 6)
-    vim.api.nvim_win_set_config(state.win, {
-      title = " " .. issue.id .. " ",
-      title_pos = "center",
-      footer = helpbar.footer("view"),
-      footer_pos = "center",
-      height = height,
-    })
+    vim.api.nvim_win_set_config(
+      state.win,
+      vim.tbl_extend("force", win_geometry(), {
+        title = " " .. issue.id .. " ",
+        title_pos = "center",
+        footer = helpbar.footer("view"),
+        footer_pos = "center",
+      })
+    )
   end
 end
 
@@ -174,24 +182,22 @@ local function ensure_float(id)
   vim.bo[state.buf].buftype = "nofile"
   vim.bo[state.buf].bufhidden = "wipe"
 
-  local width = math.min(96, vim.o.columns - 8)
-  local height = math.min(24, vim.o.lines - 6)
-  state.win = vim.api.nvim_open_win(state.buf, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2) - 1,
-    col = math.floor((vim.o.columns - width) / 2),
-    border = "rounded",
-    title = " " .. id .. " ",
-    title_pos = "center",
-    footer = helpbar.footer("view"),
-    footer_pos = "center",
-    style = "minimal",
-  })
+  state.win = vim.api.nvim_open_win(
+    state.buf,
+    true,
+    vim.tbl_extend("force", float.center(96, 24), {
+      border = "rounded",
+      title = " " .. id .. " ",
+      title_pos = "center",
+      footer = helpbar.footer("view"),
+      footer_pos = "center",
+      style = "minimal",
+    })
+  )
   vim.wo[state.win].wrap = true
   vim.wo[state.win].conceallevel = 2
 
+  float.auto_resize(state.win, win_geometry)
   setup_keymaps(state.buf)
 
   vim.api.nvim_create_autocmd("WinClosed", {

@@ -2,6 +2,7 @@
 
 local cli = require("beads.cli")
 local config = require("beads.config")
+local float = require("beads.float")
 local helpbar = require("beads.helpbar")
 local render = require("beads.render")
 
@@ -42,22 +43,23 @@ local function show_output(text, title)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
 
-  local width = math.min(100, vim.o.columns - 8)
-  local height = math.min(#lines + 1, vim.o.lines - 6)
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2) - 1,
-    col = math.floor((vim.o.columns - width) / 2),
-    border = "rounded",
-    title = " bd " .. title .. " ",
-    title_pos = "center",
-    footer = helpbar.footer("palette_output"),
-    footer_pos = "center",
-    style = "minimal",
-  })
+  local function geometry()
+    return float.center(100, #lines + 1)
+  end
+  local win = vim.api.nvim_open_win(
+    buf,
+    true,
+    vim.tbl_extend("force", geometry(), {
+      border = "rounded",
+      title = " bd " .. title .. " ",
+      title_pos = "center",
+      footer = helpbar.footer("palette_output"),
+      footer_pos = "center",
+      style = "minimal",
+    })
+  )
   vim.wo[win].wrap = false
+  float.auto_resize(win, geometry)
 
   for _, lhs in ipairs({ "q", "<Esc>" }) do
     vim.keymap.set("n", lhs, function()

@@ -2,6 +2,7 @@
 -- `bd update <id> --body-file -`.
 
 local cli = require("beads.cli")
+local float = require("beads.float")
 local helpbar = require("beads.helpbar")
 
 local M = {}
@@ -9,21 +10,21 @@ local M = {}
 -- The detail view is a float, and floats cannot be split — the edit buffer
 -- opens in its own centered float instead.
 local function open_float(buf, id)
-  local width = math.min(90, vim.o.columns - 10)
-  local height = math.min(20, vim.o.lines - 8)
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    border = "rounded",
-    title = (" edit %s "):format(id),
-    title_pos = "center",
-    footer = helpbar.footer("edit"),
-    footer_pos = "center",
-  })
+  local win = vim.api.nvim_open_win(
+    buf,
+    true,
+    vim.tbl_extend("force", float.center(90, 20), {
+      border = "rounded",
+      title = (" edit %s "):format(id),
+      title_pos = "center",
+      footer = helpbar.footer("edit"),
+      footer_pos = "center",
+    })
+  )
   vim.wo[win].wrap = true
+  float.auto_resize(win, function()
+    return float.center(90, 20)
+  end)
   return win
 end
 
