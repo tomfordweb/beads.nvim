@@ -25,6 +25,10 @@ Tested against bd 1.0.4. This project tracks its own issues with bd.
   in a float.
 - **Help bar** — every pane shows its keybinds: floats render them in the
   window footer, the picker in its prompt title.
+- **Resize-aware floats** — view/edit/palette floats re-center when the
+  terminal size changes (tmux pane resize or zoom).
+- **Link styling** — jumpable dependency ids render underlined
+  (`BeadsLink`, default-linked to `Underlined`).
 
 ## Requirements
 

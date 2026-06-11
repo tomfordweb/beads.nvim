@@ -122,6 +122,16 @@ function M.detail_lines(issue)
         dep.title or ""
       )
       add_line(lines, hls, text, dep.status == "closed" and "Comment" or nil)
+      -- style the jumpable id as a link (layered after the line highlight)
+      local id_start = text:find(dep.id, 1, true)
+      if id_start then
+        table.insert(hls, {
+          lnum = #lines - 1,
+          col_start = id_start - 1,
+          col_end = id_start - 1 + #dep.id,
+          hl_group = "BeadsLink",
+        })
+      end
     end
   end
 
@@ -149,6 +159,7 @@ function M.define_highlights()
     BeadsSection = "Function",
     BeadsHelp = "NonText",
     BeadsHelpKey = "Special",
+    BeadsLink = "Underlined",
     BeadsStatusOpen = "DiagnosticInfo",
     BeadsStatusInProgress = "DiagnosticWarn",
     BeadsStatusBlocked = "DiagnosticError",

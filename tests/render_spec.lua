@@ -75,6 +75,20 @@ describe("render.detail_lines", function()
     assert.is_nil(find_line(lines, "^## Depends on"))
   end)
 
+  it("styles dep ids as links spanning exactly the id", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines, hls = render.detail_lines(issue)
+    local found = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        found = true
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        assert.equals(span, issues.match_issue_id(span))
+      end
+    end
+    assert.is_true(found, "no BeadsLink highlight emitted")
+  end)
+
   it("returns highlights within line bounds", function()
     local issue = issues.normalize(fixtures.show_issue)
     local lines, hls = render.detail_lines(issue)
