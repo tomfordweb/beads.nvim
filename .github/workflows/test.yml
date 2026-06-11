@@ -1,0 +1,65 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: nvim ${{ matrix.nvim }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        nvim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+
+      - name: Check out plenary.nvim
+        uses: actions/checkout@v4
+        with:
+          repository: nvim-lua/plenary.nvim
+          path: .deps/plenary.nvim
+
+      - name: Check out telescope.nvim
+        uses: actions/checkout@v4
+        with:
+          repository: nvim-telescope/telescope.nvim
+          path: .deps/telescope.nvim
+
+      # bd is best-effort: when present the integration suite runs, otherwise it
+      # self-skips (see tests/integration_spec.lua). Never fail the job on this.
+      - name: Install bd (beads) — best effort
+        continue-on-error: true
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: go install bd — best effort
+        continue-on-error: true
+        run: |
+          go install github.com/gastownhall/beads/cmd/bd@latest \
+            || go install github.com/gastownhall/beads@latest \
+            || echo "bd install skipped; integration suite will be skipped"
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests
+        env:
+          PLENARY_DIR: ${{ github.workspace }}/.deps/plenary.nvim
+          TELESCOPE_DIR: ${{ github.workspace }}/.deps/telescope.nvim
+        run: |
+          nvim --headless --noplugin -u tests/minimal_init.lua \
+            -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/minimal_init.lua', sequential = true}" \
+            2>&1 | tee /tmp/test.out
+          # PlenaryBustedDirectory exits 0 even on failure; grep the report.
+          if grep -qE "Failed : *[1-9]|Errors : *[1-9]" /tmp/test.out; then
+            echo "::error::test failures detected"
+            exit 1
+          fi
