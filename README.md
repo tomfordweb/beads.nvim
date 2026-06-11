@@ -72,12 +72,16 @@ shorthand for:
 keymaps = {
   base = "<leader>bd",
   menus = {
-    l = "browse",   -- all non-closed issues
-    o = "open",     -- status:open only
-    r = "ready",    -- unblocked work
-    c = "create",   -- interactive create form
-    q = "quick",    -- quick capture (bd q)
-    p = "palette",  -- command palette
+    l = "browse",      -- all non-closed issues
+    a = "all",         -- every issue, closed included
+    o = "open",        -- status:open only
+    i = "in_progress", -- status:in_progress
+    b = "blocked",     -- status:blocked
+    d = "closed",      -- status:closed ("done")
+    r = "ready",       -- unblocked work
+    c = "create",      -- interactive create form
+    q = "quick",       -- quick capture (bd q)
+    p = "palette",     -- command palette
   },
 }
 ```
