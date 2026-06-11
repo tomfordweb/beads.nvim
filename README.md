@@ -10,12 +10,21 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
 ## Features
 
 - **Issue browser** — Telescope picker over `bd list` with live filter
-  cycling (status / priority / type / include-closed) and a rendered issue
-  preview. No subprocess per keystroke: one fetch, client-side filtering.
+  cycling (status / priority / type / label / include-closed) and a rendered
+  issue preview. No subprocess per keystroke: one fetch, client-side
+  filtering. `<C-f>` defers/undefers the selected issue.
 - **Ready view** — `bd ready` (open issues with no active blockers).
 - **Detail view** — floating window with full fields and dependencies.
-  Change status/priority, close/reopen, and jump through dependency ids
-  (`gd` / `<CR>`) with `<BS>` history.
+  Change status/priority, assign (`A`), labels (`L`), defer/undefer (`f`),
+  close/reopen, and jump through dependency ids (`gd` / `<CR>`) with `<BS>`
+  history.
+- **Labels** — `L` in the detail view adds or removes labels (pick an
+  existing one or type a new); `<C-l>` filters the browser by label.
+- **Epic children** — epics render a `Children` section in the detail body
+  (completion count, every child id jumpable); `:BeadsPalette` → `epic
+  status` shows completion per epic.
+- **Change history** — `H` in the detail view shows the issue's tracked-field
+  transitions (status/priority/assignee/title/type/description) in a float.
 - **Links sidebar** — companion pane beside the detail view: overview
   (status/priority/assignee/labels/dates) plus parent, children, depends-on
   and blocks sections, every id jumpable. `<Tab>` switches panes, `gs`
@@ -25,8 +34,9 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
 - **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
   `:BeadsQuick` quick capture wrapping `bd q`.
 - **Command palette** — `:BeadsPalette` runs repo-level commands
-  (`status`, `ready`, `stale`, `lint`, `dep cycles`, `init`, …) with output
-  in a float.
+  (`status`, `epic status`, `ready`, `blocked`, `stale`, `lint`, `preflight`,
+  `doctor`, `find-duplicates`, `orphans`, `dep cycles`, `diff`, `init`, …)
+  with output in a float.
 - **Help bar** — every pane shows its keybinds: floats render them in the
   window footer, the picker in its prompt title.
 - **Resize-aware floats** — view/edit/palette floats re-center when the
@@ -90,9 +100,11 @@ require("beads").setup({
   -- of equivalent keys, or false to disable. Partial overrides merge; an
   -- overridden value replaces the default wholesale.
   mappings = {
-    picker   = { open = "<CR>", status = "<C-s>", priority = "<C-y>", type = "<C-t>", closed = "<C-a>", refetch = "<C-r>" },
-    view     = { edit = "e", status = "s", priority = "p", comment = "a", close = "c", reopen = "o",
-                 graph = "D", jump = { "gd", "<CR>" }, back = "<BS>", refresh = "R", quit = { "q", "<Esc>" },
+    picker   = { open = "<CR>", status = "<C-s>", priority = "<C-y>", type = "<C-t>", label = "<C-l>",
+                 defer = "<C-f>", closed = "<C-a>", refetch = "<C-r>" },
+    view     = { edit = "e", status = "s", priority = "p", comment = "a", labels = "L", assign = "A",
+                 defer = "f", close = "c", reopen = "o", graph = "D", history = "H",
+                 jump = { "gd", "<CR>" }, back = "<BS>", refresh = "R", quit = { "q", "<Esc>" },
                  sidebar = "<Tab>", sidebar_toggle = "gs" },
     sidebar  = { jump = { "gd", "<CR>" }, focus_view = "<Tab>", back = "<BS>", quit = { "q", "<Esc>" } },
     memories = { edit = "<CR>", new = "<C-n>", forget = "<C-d>", refetch = "<C-r>" },
