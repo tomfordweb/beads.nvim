@@ -67,12 +67,35 @@ function M.status_hl(status)
   return STATUS_HL[status] or "BeadsStatusOpen"
 end
 
+--- Append a link-styled, gd-jumpable issue row (icon, id, status, prio,
+--- title) indented under a section. Closed entries are dimmed.
+local function add_issue_row(lines, hls, entry)
+  local text = ("  %s %s  %s  %s  %s"):format(
+    issues.status_icon(entry.status),
+    entry.id,
+    entry.status or "?",
+    issues.priority_label(entry.priority),
+    entry.title or ""
+  )
+  add_line(lines, hls, text, entry.status == "closed" and "Comment" or nil)
+  local id_start = text:find(entry.id, 1, true)
+  if id_start then
+    table.insert(hls, {
+      lnum = #lines - 1,
+      col_start = id_start - 1,
+      col_end = id_start - 1 + #entry.id,
+      hl_group = "BeadsLink",
+    })
+  end
+end
+
 --- Render a full issue (from `bd show --json`) into buffer lines plus
 --- extmark highlight specs ({lnum, col_start, col_end, hl_group}, 0-indexed).
 ---@param issue table normalized issue
 ---@param comments { author: string|nil, text: string|nil, created_at: string|nil }[]|nil
+---@param children table[]|nil normalized children (epics only; from bd children)
 ---@return string[] lines, table[] highlights
-function M.detail_lines(issue, comments)
+function M.detail_lines(issue, comments, children)
   local lines, hls = {}, {}
 
   add_line(lines, hls, ("# %s"):format(issue.title), "BeadsTitle")
@@ -107,6 +130,20 @@ function M.detail_lines(issue, comments)
   else
     for _, l in ipairs(vim.split(issue.description, "\n", { plain = true })) do
       add_line(lines, hls, l)
+    end
+  end
+
+  if children and #children > 0 then
+    local closed = 0
+    for _, child in ipairs(children) do
+      if child.status == "closed" then
+        closed = closed + 1
+      end
+    end
+    add_line(lines, hls, "")
+    add_line(lines, hls, ("## Children (%d/%d closed)"):format(closed, #children), "BeadsSection")
+    for _, child in ipairs(children) do
+      add_issue_row(lines, hls, child)
     end
   end
 

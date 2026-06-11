@@ -88,9 +88,9 @@ end
 
 local update_sidebar -- defined below; needs the jump/back helpers
 
-local function set_content(issue, comments)
+local function set_content(issue, comments, children)
   state.issue = issue
-  local lines, hls = render.detail_lines(issue, comments)
+  local lines, hls = render.detail_lines(issue, comments, children)
 
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
@@ -105,6 +105,25 @@ local function set_content(issue, comments)
     )
   end
   update_sidebar(issue)
+end
+
+-- Epics show a Children section in the body; non-epics skip the extra call.
+local function with_children(issue, cb)
+  if issue.issue_type ~= "epic" then
+    cb(nil)
+    return
+  end
+  cli.run_json({ "children", issue.id }, function(ok, raw)
+    if not ok or type(raw) ~= "table" then
+      cb(nil)
+      return
+    end
+    local out = {}
+    for _, c in ipairs(raw) do
+      table.insert(out, issues.normalize(c))
+    end
+    cb(out)
+  end)
 end
 
 local function update_and_rerender(args, msg, action)
@@ -450,11 +469,13 @@ function M.open(id, opts)
     end
     local issue = issues.normalize(result[1])
     cli.run_json({ "comments", id }, function(cok, comments)
-      ensure_float(id)
-      if opts and opts.on_close then
-        state.on_close = opts.on_close
-      end
-      set_content(issue, cok and comments or nil)
+      with_children(issue, function(children)
+        ensure_float(id)
+        if opts and opts.on_close then
+          state.on_close = opts.on_close
+        end
+        set_content(issue, cok and comments or nil, children)
+      end)
     end)
   end)
 end
@@ -471,9 +492,11 @@ function M.refresh()
     end
     local issue = issues.normalize(result[1])
     cli.run_json({ "comments", id }, function(cok, comments)
-      if is_open() then
-        set_content(issue, cok and comments or nil)
-      end
+      with_children(issue, function(children)
+        if is_open() then
+          set_content(issue, cok and comments or nil, children)
+        end
+      end)
     end)
   end)
 end

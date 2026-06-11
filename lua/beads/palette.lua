@@ -15,6 +15,12 @@ local M = {}
 ---@type BeadsPaletteCommand[]
 M.commands = {
   { label = "status — database overview and statistics", args = { "status" } },
+  { label = "epic status — completion per epic", args = { "epic", "status" } },
+  {
+    label = "epic close-eligible — close epics whose children are all done",
+    args = { "epic", "close-eligible" },
+    confirm = true,
+  },
   { label = "ready — unblocked open issues", args = { "ready" } },
   { label = "stale — issues not updated recently", args = { "stale" } },
   { label = "lint — check issues for missing sections", args = { "lint" } },

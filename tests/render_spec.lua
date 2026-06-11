@@ -117,6 +117,41 @@ describe("render.detail_lines", function()
     assert.is_truthy(find_line(lines, "^  second$"))
   end)
 
+  it("renders children section with completion count and link-styled ids", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local children = {
+      issues.normalize({ id = "beads_nvim-c1", title = "kid one", status = "closed", priority = 2 }),
+      issues.normalize({ id = "beads_nvim-c2", title = "kid two", status = "open", priority = 1 }),
+    }
+    local lines, hls = render.detail_lines(issue, nil, children)
+    assert.is_truthy(find_line(lines, "^## Children %(1/2 closed%)"))
+    -- child id is a standalone cWORD and link-styled
+    local _, row = find_line(lines, "beads_nvim%-c2")
+    local found = false
+    for word in row:gmatch("%S+") do
+      if word == "beads_nvim-c2" then
+        found = true
+      end
+    end
+    assert.is_true(found)
+    local linked = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        if span == "beads_nvim-c2" or span == "beads_nvim-c1" then
+          linked = true
+        end
+      end
+    end
+    assert.is_true(linked, "child id not link-styled")
+  end)
+
+  it("omits children section when nil or empty", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    assert.is_nil(find_line(render.detail_lines(issue), "^## Children"))
+    assert.is_nil(find_line(render.detail_lines(issue, nil, {}), "^## Children"))
+  end)
+
   it("omits comments section when empty or nil", function()
     local issue = issues.normalize(fixtures.show_issue)
     assert.is_nil(find_line(render.detail_lines(issue, {}), "^## Comments"))
