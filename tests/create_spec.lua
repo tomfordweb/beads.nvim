@@ -78,10 +78,18 @@ describe("beads.create", function()
     create.open_form()
     drain()
     package.loaded["beads.view"] = nil
-    assert.are.same(
-      { "bd", "create", "new feature", "-t", "feature", "-p", "0", "--deps", "blocks:bd-15", "--json" },
-      recorded[1].argv
-    )
+    assert.are.same({
+      "bd",
+      "create",
+      "new feature",
+      "-t",
+      "feature",
+      "-p",
+      "0",
+      "--deps",
+      "blocks:bd-15",
+      "--json",
+    }, recorded[1].argv)
   end)
 
   it("form aborts when title empty", function()

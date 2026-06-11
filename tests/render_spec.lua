@@ -130,7 +130,11 @@ describe("render.sidebar_lines", function()
   local function build(sections)
     local issue = issues.normalize(fixtures.show_child_issue)
     local links = issues.partition_links(issue, fixtures.dependents)
-    return render.sidebar_lines(issue, links, { sections = sections or DEFAULT_SECTIONS, width = 34 })
+    return render.sidebar_lines(
+      issue,
+      links,
+      { sections = sections or DEFAULT_SECTIONS, width = 34 }
+    )
   end
 
   local function find_line(lines, pattern)
@@ -150,7 +154,9 @@ describe("render.sidebar_lines", function()
     local depends = find_line(lines, "^Depends on$")
     local blocks = find_line(lines, "^Blocks$")
     assert.is_truthy(overview)
-    assert.is_true(overview < parent and parent < children and children < depends and depends < blocks)
+    assert.is_true(
+      overview < parent and parent < children and children < depends and depends < blocks
+    )
   end)
 
   it("respects custom section selection and order", function()
@@ -235,7 +241,8 @@ describe("render.sidebar_lines", function()
   it("renders placeholder when nothing to show", function()
     local issue = issues.normalize(fixtures.sparse_issue)
     local links = issues.partition_links(issue, {})
-    local lines = render.sidebar_lines(issue, links, { sections = { "parent", "children" }, width = 34 })
+    local lines =
+      render.sidebar_lines(issue, links, { sections = { "parent", "children" }, width = 34 })
     assert.are.same({ "(no links)" }, lines)
   end)
 end)

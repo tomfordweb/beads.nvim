@@ -75,14 +75,22 @@ local function setup_keymaps(buf)
   }
   for action, handler in pairs(handlers) do
     for _, lhs in ipairs(config.lhs(mappings[action])) do
-      vim.keymap.set("n", lhs, handler.fn, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc })
+      vim.keymap.set(
+        "n",
+        lhs,
+        handler.fn,
+        { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc }
+      )
     end
   end
 end
 
 local function ensure_win(geometry)
   if M.is_open() then
-    vim.api.nvim_win_set_config(state.win, float.decorate(geometry, { title = " links ", pane = "sidebar" }))
+    vim.api.nvim_win_set_config(
+      state.win,
+      float.decorate(geometry, { title = " links ", pane = "sidebar" })
+    )
     return
   end
   state.buf = vim.api.nvim_create_buf(false, true)
@@ -117,7 +125,8 @@ function M.open(issue, links, geometry, callbacks)
   ensure_win(geometry)
 
   local cfg = config.get().sidebar
-  local lines, hls = render.sidebar_lines(issue, links, { sections = cfg.sections, width = cfg.width })
+  local lines, hls =
+    render.sidebar_lines(issue, links, { sections = cfg.sections, width = cfg.width })
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
@@ -128,7 +137,10 @@ end
 ---@param geometry table
 function M.reposition(geometry)
   if M.is_open() then
-    vim.api.nvim_win_set_config(state.win, float.decorate(geometry, { title = " links ", pane = "sidebar" }))
+    vim.api.nvim_win_set_config(
+      state.win,
+      float.decorate(geometry, { title = " links ", pane = "sidebar" })
+    )
   end
 end
 

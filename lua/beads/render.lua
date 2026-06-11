@@ -154,7 +154,12 @@ function M.detail_lines(issue, comments)
     add_line(lines, hls, "")
     add_line(lines, hls, ("## Comments (%d)"):format(#comments), "BeadsSection")
     for _, comment in ipairs(comments) do
-      add_line(lines, hls, ("%s — %s"):format(comment.author or "?", short_date(comment.created_at)), "BeadsMeta")
+      add_line(
+        lines,
+        hls,
+        ("%s — %s"):format(comment.author or "?", short_date(comment.created_at)),
+        "BeadsMeta"
+      )
       for _, l in ipairs(vim.split(comment.text or "", "\n", { plain = true })) do
         add_line(lines, hls, "  " .. l)
       end
@@ -237,7 +242,12 @@ function M.sidebar_lines(issue, links, opts)
         add_line(lines, hls, truncate(" assignee: " .. issue.assignee, width), "BeadsMeta")
       end
       if #issue.labels > 0 then
-        add_line(lines, hls, truncate(" labels: " .. table.concat(issue.labels, ", "), width), "BeadsMeta")
+        add_line(
+          lines,
+          hls,
+          truncate(" labels: " .. table.concat(issue.labels, ", "), width),
+          "BeadsMeta"
+        )
       end
       add_line(lines, hls, " created " .. short_date(issue.created_at), "BeadsMeta")
       add_line(lines, hls, " updated " .. short_date(issue.updated_at), "BeadsMeta")
@@ -245,7 +255,9 @@ function M.sidebar_lines(issue, links, opts)
         add_line(lines, hls, (" comments: %d"):format(issue.comment_count), "BeadsMeta")
       end
     elseif SIDEBAR_TITLES[section] then
-      local entries = section == "parent" and (links.parent and { links.parent } or {}) or links[section] or {}
+      local entries = section == "parent" and (links.parent and { links.parent } or {})
+        or links[section]
+        or {}
       if #entries > 0 then
         blank_separator()
         local header = SIDEBAR_TITLES[section]

@@ -44,7 +44,13 @@ function M.open_description(issue)
   vim.bo[buf].filetype = "markdown"
   vim.bo[buf].bufhidden = "wipe"
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(issue.description or "", "\n", { plain = true }))
+  vim.api.nvim_buf_set_lines(
+    buf,
+    0,
+    -1,
+    false,
+    vim.split(issue.description or "", "\n", { plain = true })
+  )
   vim.bo[buf].modified = false
 
   vim.api.nvim_create_autocmd("BufWriteCmd", {

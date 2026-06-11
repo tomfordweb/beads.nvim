@@ -48,7 +48,10 @@ local function show_output(text, title)
   local win = vim.api.nvim_open_win(
     buf,
     true,
-    float.decorate(geometry(), { title = " bd " .. title .. " ", pane = "palette_output", style = "minimal" })
+    float.decorate(
+      geometry(),
+      { title = " bd " .. title .. " ", pane = "palette_output", style = "minimal" }
+    )
   )
   vim.wo[win].wrap = false
   float.auto_resize(win, geometry)
@@ -66,7 +69,11 @@ end
 local function run_command(cmd)
   if cmd.confirm then
     local dir = cli.resolve_cwd()
-    local choice = vim.fn.confirm(("Run `bd %s` in %s?"):format(table.concat(cmd.args, " "), dir), "&Yes\n&No", 2)
+    local choice = vim.fn.confirm(
+      ("Run `bd %s` in %s?"):format(table.concat(cmd.args, " "), dir),
+      "&Yes\n&No",
+      2
+    )
     if choice ~= 1 then
       return
     end

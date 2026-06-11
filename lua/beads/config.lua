@@ -87,7 +87,13 @@ local defaults = {
     },
   },
   icons = {
-    status = { open = "○", in_progress = "◐", blocked = "⊘", deferred = "❄", closed = "●" },
+    status = {
+      open = "○",
+      in_progress = "◐",
+      blocked = "⊘",
+      deferred = "❄",
+      closed = "●",
+    },
     deps_down = "↓",
     deps_up = "↑",
   },

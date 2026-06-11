@@ -11,10 +11,7 @@ describe("issues.build_list_args", function()
   end)
 
   it("includes status filter", function()
-    assert.are.same(
-      { "list", "--status", "open" },
-      issues.build_list_args({ status = "open" })
-    )
+    assert.are.same({ "list", "--status", "open" }, issues.build_list_args({ status = "open" }))
   end)
 
   it("includes priority 0 (falsy-adjacent but valid)", function()
@@ -35,7 +32,13 @@ describe("issues.build_list_args", function()
   it("combines all filters", function()
     assert.are.same(
       { "list", "--all", "--status", "closed", "-p", "1", "--type", "task", "-n", "10" },
-      issues.build_list_args({ all = true, status = "closed", priority = 1, type = "task", limit = 10 })
+      issues.build_list_args({
+        all = true,
+        status = "closed",
+        priority = 1,
+        type = "task",
+        limit = 10,
+      })
     )
   end)
 end)
@@ -93,7 +96,10 @@ describe("issues.build_search_args", function()
   end)
 
   it("appends --status all when requested", function()
-    assert.are.same({ "search", "x", "--status", "all" }, issues.build_search_args("x", { all = true }))
+    assert.are.same(
+      { "search", "x", "--status", "all" },
+      issues.build_search_args("x", { all = true })
+    )
   end)
 end)
 
@@ -132,8 +138,15 @@ describe("issues.match_issue_id", function()
 end)
 
 describe("issues.matches", function()
-  local open_bug = issues.normalize({ id = "x-1", title = "t", status = "open", issue_type = "bug", priority = 1 })
-  local closed_task = issues.normalize({ id = "x-2", title = "t", status = "closed", issue_type = "task", priority = 2 })
+  local open_bug =
+    issues.normalize({ id = "x-1", title = "t", status = "open", issue_type = "bug", priority = 1 })
+  local closed_task = issues.normalize({
+    id = "x-2",
+    title = "t",
+    status = "closed",
+    issue_type = "task",
+    priority = 2,
+  })
 
   it("hides closed by default", function()
     assert.is_true(issues.matches(open_bug, {}))
@@ -156,7 +169,8 @@ describe("issues.matches", function()
   end)
 
   it("filters by label", function()
-    local tagged = issues.normalize({ id = "x-3", title = "t", status = "open", labels = { "ui", "perf" } })
+    local tagged =
+      issues.normalize({ id = "x-3", title = "t", status = "open", labels = { "ui", "perf" } })
     assert.is_true(issues.matches(tagged, { label = "ui" }))
     assert.is_true(issues.matches(tagged, { label = "perf" }))
     assert.is_false(issues.matches(tagged, { label = "docs" }))
@@ -235,13 +249,14 @@ describe("issues.statuses / issues.types", function()
   it("fetches status names and icons from bd", function()
     cli.run_sync = function(args)
       assert.are.same({ "statuses" }, args)
-      return true, {
-        built_in_statuses = {
-          { name = "open", icon = "○" },
-          { name = "hooked", icon = "◇" },
-        },
-        schema_version = 1,
-      }
+      return true,
+        {
+          built_in_statuses = {
+            { name = "open", icon = "○" },
+            { name = "hooked", icon = "◇" },
+          },
+          schema_version = 1,
+        }
     end
     assert.are.same({ "open", "hooked" }, issues.statuses())
     -- not in config icon table -> falls back to bd's icon

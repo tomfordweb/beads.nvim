@@ -16,7 +16,12 @@ function M.picker_opts()
     if builder then
       base = builder(vim.deepcopy(cfg.theme_opts or {}))
     else
-      vim.notify(("beads.nvim: unknown picker.theme %q (use ivy/dropdown/cursor or false)"):format(tostring(cfg.theme)), vim.log.levels.WARN)
+      vim.notify(
+        ("beads.nvim: unknown picker.theme %q (use ivy/dropdown/cursor or false)"):format(
+          tostring(cfg.theme)
+        ),
+        vim.log.levels.WARN
+      )
     end
   end
   return vim.tbl_deep_extend("force", base, cfg.telescope or {})

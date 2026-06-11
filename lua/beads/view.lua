@@ -15,7 +15,8 @@ local M = {}
 -- on_close (when set by the caller, e.g. the picker) runs after the float
 -- closes so the user lands back where they came from. sidebar_visible
 -- persists across dep jumps within one view session.
-local state = { win = nil, buf = nil, issue = nil, history = {}, on_close = nil, sidebar_visible = nil }
+local state =
+  { win = nil, buf = nil, issue = nil, history = {}, on_close = nil, sidebar_visible = nil }
 
 local function reset_state()
   local cb = state.on_close
@@ -48,7 +49,10 @@ end
 -- centered together as one unit. Returns main, sidebar (sidebar nil when
 -- hidden). Shrinks the sidebar first on narrow screens.
 local function layout()
-  local count = state.buf and vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_buf_line_count(state.buf) or 24
+  local count = state.buf
+      and vim.api.nvim_buf_is_valid(state.buf)
+      and vim.api.nvim_buf_line_count(state.buf)
+    or 24
   local view_w = float.dims("view").width or 96
   local side_cfg = config.get().sidebar
   if not state.sidebar_visible then
@@ -216,11 +220,19 @@ local handlers = {
       if not state.issue then
         return
       end
-      vim.ui.select(issues.statuses(), { prompt = "Status for " .. state.issue.id }, function(choice)
-        if choice then
-          update_and_rerender({ "update", state.issue.id, "-s", choice }, state.issue.id .. " → " .. choice, "status")
+      vim.ui.select(
+        issues.statuses(),
+        { prompt = "Status for " .. state.issue.id },
+        function(choice)
+          if choice then
+            update_and_rerender(
+              { "update", state.issue.id, "-s", choice },
+              state.issue.id .. " → " .. choice,
+              "status"
+            )
+          end
         end
-      end)
+      )
     end,
   },
   priority = {
@@ -316,10 +328,18 @@ local handlers = {
               if not name or name == "" then
                 return
               end
-              update_and_rerender({ "label", "add", id, name }, "labeled " .. id .. " #" .. name, "label")
+              update_and_rerender(
+                { "label", "add", id, name },
+                "labeled " .. id .. " #" .. name,
+                "label"
+              )
             end)
           elseif action.op == "add" then
-            update_and_rerender({ "label", "add", id, action.label }, "labeled " .. id .. " #" .. action.label, "label")
+            update_and_rerender(
+              { "label", "add", id, action.label },
+              "labeled " .. id .. " #" .. action.label,
+              "label"
+            )
           else
             update_and_rerender(
               { "label", "remove", id, action.label },
@@ -373,7 +393,12 @@ local function setup_keymaps(buf)
   local mappings = config.get().mappings.view or {}
   for action, handler in pairs(handlers) do
     for _, lhs in ipairs(config.lhs(mappings[action])) do
-      vim.keymap.set("n", lhs, handler.fn, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc })
+      vim.keymap.set(
+        "n",
+        lhs,
+        handler.fn,
+        { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc }
+      )
     end
   end
 end

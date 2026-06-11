@@ -14,7 +14,10 @@ function M.setup(opts)
         if fn then
           vim.keymap.set("n", keymaps.base .. key, fn, { desc = "Beads: " .. desc, silent = true })
         else
-          vim.notify(("beads.nvim: unknown keymap action %q for key %q"):format(tostring(value), key), vim.log.levels.WARN)
+          vim.notify(
+            ("beads.nvim: unknown keymap action %q for key %q"):format(tostring(value), key),
+            vim.log.levels.WARN
+          )
         end
       end
     end

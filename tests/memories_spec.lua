@@ -58,7 +58,10 @@ describe("memories.edit save round-trip", function()
     vim.wait(200, function()
       return #recorded > 0
     end, 5)
-    assert.are.same({ "bd", "remember", "new line one\n\nnew line three", "--key", "test-key" }, recorded[1].argv)
+    assert.are.same(
+      { "bd", "remember", "new line one\n\nnew line three", "--key", "test-key" },
+      recorded[1].argv
+    )
   end)
 
   it("refuses to save empty content", function()

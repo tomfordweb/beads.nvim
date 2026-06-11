@@ -4,8 +4,7 @@
 local root = vim.fn.fnamemodify(vim.fn.expand("<sfile>:p"), ":h:h")
 vim.opt.rtp:prepend(root)
 
-local plenary = os.getenv("PLENARY_DIR")
-  or vim.fn.expand("~/.local/share/nvim/lazy/plenary.nvim")
+local plenary = os.getenv("PLENARY_DIR") or vim.fn.expand("~/.local/share/nvim/lazy/plenary.nvim")
 vim.opt.rtp:prepend(plenary)
 
 -- telescope is a runtime dep of the picker; wire it when present so picker

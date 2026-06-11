@@ -39,7 +39,10 @@ function M.open(id)
     local win = vim.api.nvim_open_win(
       buf,
       true,
-      float.decorate(geometry(), { title = " graph " .. id .. " ", pane = "graph", style = "minimal" })
+      float.decorate(
+        geometry(),
+        { title = " graph " .. id .. " ", pane = "graph", style = "minimal" }
+      )
     )
     vim.wo[win].wrap = false
     float.auto_resize(win, geometry)
@@ -60,7 +63,12 @@ function M.open(id)
     local m = config.get().mappings.graph
     local function bmap(lhs_value, rhs, desc)
       for _, lhs in ipairs(config.lhs(lhs_value)) do
-        vim.keymap.set("n", lhs, rhs, { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. desc })
+        vim.keymap.set(
+          "n",
+          lhs,
+          rhs,
+          { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. desc }
+        )
       end
     end
     bmap(m.quit, close, "close graph")

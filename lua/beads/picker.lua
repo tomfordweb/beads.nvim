@@ -145,7 +145,8 @@ function M.search(opts)
       if not prompt or vim.trim(prompt) == "" then
         return {}
       end
-      local ok, results = cli.run_sync(issues.build_search_args(prompt, { all = include_closed }), { json = true })
+      local ok, results =
+        cli.run_sync(issues.build_search_args(prompt, { all = include_closed }), { json = true })
       if not ok or type(results) ~= "table" then
         return {}
       end

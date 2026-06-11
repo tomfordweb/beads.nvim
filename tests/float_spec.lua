@@ -22,7 +22,11 @@ end)
 describe("beads.float.auto_resize", function()
   it("reapplies geometry on VimResized and detaches on close", function()
     local buf = vim.api.nvim_create_buf(false, true)
-    local win = vim.api.nvim_open_win(buf, false, vim.tbl_extend("force", float.center(30, 5), { border = "single" }))
+    local win = vim.api.nvim_open_win(
+      buf,
+      false,
+      vim.tbl_extend("force", float.center(30, 5), { border = "single" })
+    )
 
     local calls = 0
     float.auto_resize(win, function()

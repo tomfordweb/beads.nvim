@@ -41,7 +41,9 @@ describe("integration (real bd)", function()
     local id = vim.trim(out)
 
     assert.is_true(cli.run_sync({ "update", id, "-s", "in_progress" }))
-    assert.is_true(cli.run_sync({ "update", id, "--body-file", "-" }, { input = "line one\n\nline three" }))
+    assert.is_true(
+      cli.run_sync({ "update", id, "--body-file", "-" }, { input = "line one\n\nline three" })
+    )
 
     local ok, shown = cli.run_sync({ "show", id }, { json = true })
     assert.is_true(ok)
@@ -103,7 +105,9 @@ describe("integration (real bd)", function()
     local _, out = cli.run_sync({ "q", "commented issue" })
     local id = vim.trim(out)
 
-    assert.is_true(cli.run_sync({ "comment", id, "--stdin" }, { input = "a comment\nwith two lines" }))
+    assert.is_true(
+      cli.run_sync({ "comment", id, "--stdin" }, { input = "a comment\nwith two lines" })
+    )
 
     local ok, comments = cli.run_sync({ "comments", id }, { json = true })
     assert.is_true(ok)
