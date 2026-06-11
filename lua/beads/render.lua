@@ -172,8 +172,11 @@ end
 function M.link_spans(lines)
   local hls = {}
   for lnum, line in ipairs(lines) do
-    local s, e = line:find("[%a][%w_-]*%-%w+")
+    local s, e = line:find("[%a][%w_-]*%-[%w.]+")
     if s then
+      while e > s and line:sub(e, e) == "." do
+        e = e - 1
+      end
       table.insert(hls, {
         lnum = lnum - 1,
         col_start = s - 1,

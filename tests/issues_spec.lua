@@ -106,6 +106,12 @@ describe("issues.match_issue_id", function()
     assert.equals("beads_nvim-x9s", issues.match_issue_id("beads_nvim-x9s"))
   end)
 
+  it("matches hierarchical child ids and strips sentence dots", function()
+    assert.equals("beads_nvim-u2f.1", issues.match_issue_id("beads_nvim-u2f.1"))
+    assert.equals("beads_nvim-u2f.12", issues.match_issue_id("(beads_nvim-u2f.12)"))
+    assert.equals("beads_nvim-u2f", issues.match_issue_id("beads_nvim-u2f."))
+  end)
+
   it("matches full id when prefix contains hyphens", function()
     assert.equals("bundle-analyzer-v2y", issues.match_issue_id("bundle-analyzer-v2y"))
     assert.equals("my-multi-part-repo-a1b", issues.match_issue_id("my-multi-part-repo-a1b"))

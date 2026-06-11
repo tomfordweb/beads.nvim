@@ -41,8 +41,11 @@ function M.match_issue_id(word)
     return nil
   end
   -- greedy class + backtracking pins the hash to the last hyphen segment,
-  -- so multi-hyphen prefixes match in full instead of truncating
-  return word:match("([%a][%w_-]*%-%w+)")
+  -- so multi-hyphen prefixes match in full instead of truncating; dots
+  -- cover hierarchical child ids (bd-u2f.1), trailing dots are sentence
+  -- punctuation, not id
+  local id = word:match("([%a][%w_-]*%-[%w.]+)")
+  return id and id:gsub("%.+$", "") or nil
 end
 
 --- Build argv tail for `bd search`.
