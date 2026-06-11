@@ -29,8 +29,10 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
   (status/priority/assignee/labels/dates) plus parent, children, depends-on
   and blocks sections, every id jumpable. `<Tab>` switches panes, `gs`
   toggles it.
-- **Description editing** — `e` opens the description in a markdown buffer;
-  `:w` persists via `bd update --body-file -`.
+- **Description editing** — `e` edits the description in place inside the
+  detail float (no nested modal); `:w` persists via `bd update --body-file -`,
+  `:wq` saves and returns to the detail view. Optional autosave and persistent
+  undo (see `edit` config).
 - **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
   `:BeadsQuick` quick capture wrapping `bd q`.
 - **Command palette** — `:BeadsPalette` runs repo-level commands
@@ -126,6 +128,18 @@ require("beads").setup({
     edit = { width = 0.7, height = 0.6 },-- also the memory edit float
     palette = { width = 0.7 },           -- height content-sized
     graph = { width = 0.8 },             -- height content-sized
+  },
+
+  -- inline description editing (the `e` key in the detail view)
+  edit = {
+    inline = true,              -- false: use the separate edit float instead
+    discard_on_quit = false,    -- :q saves before returning; true discards
+    autosave = false,           -- debounced save while typing
+    autosave_debounce_ms = 800,
+    persistent_undo = false,    -- keep undo history across edit sessions
+    undodir = nil,              -- defaults to stdpath("state")/beads/undo
+    guard_keys = {},            -- normal-mode keys to neutralize in the editor
+                                -- only (e.g. { "-" } to tame oil.nvim mid-edit)
   },
 
   -- linked-issues sidebar next to the detail view
@@ -260,7 +274,7 @@ beads|ready|search|memories`.
 
 | Key | Action |
 |-----|--------|
-| `e` | edit description (`:w` saves) |
+| `e` | edit description in place (`:w` save · `:wq` save+back · `:q` back) |
 | `s` / `p` | set status / priority |
 | `a` | add a comment |
 | `c` / `o` | close / reopen |

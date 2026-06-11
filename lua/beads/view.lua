@@ -4,6 +4,7 @@
 local cli = require("beads.cli")
 local config = require("beads.config")
 local float = require("beads.float")
+local inline_edit = require("beads.inline_edit")
 local issues = require("beads.issues")
 local render = require("beads.render")
 local sidebar = require("beads.sidebar")
@@ -19,6 +20,7 @@ local state =
   { win = nil, buf = nil, issue = nil, history = {}, on_close = nil, sidebar_visible = nil }
 
 local function reset_state()
+  inline_edit.abort() -- the float is gone; drop any edit submode bookkeeping
   local cb = state.on_close
   state.win = nil
   state.buf = nil
@@ -226,13 +228,40 @@ local function hide_sidebar()
   reapply_main_geometry()
 end
 
+-- Enter the in-place description editor inside this float (M4). The submode
+-- swaps an editable buffer into state.win and restores the detail view on exit
+-- (re-rendering so a saved description shows immediately).
+local function enter_inline_edit()
+  if not (is_open() and state.issue) then
+    return
+  end
+  inline_edit.enter({
+    win = state.win,
+    view_buf = state.buf,
+    issue = state.issue,
+    reconfigure = function(opts)
+      if is_open() then
+        vim.api.nvim_win_set_config(state.win, float.decorate(win_geometry(), opts))
+      end
+    end,
+    on_exit = function()
+      M.refresh()
+    end,
+  })
+end
+
 -- Handlers for the configurable view mappings (config.mappings.view).
 local handlers = {
   quit = { desc = "close", fn = close_win },
   edit = {
     desc = "edit description",
     fn = function()
-      if state.issue then
+      if not state.issue then
+        return
+      end
+      if config.get().edit.inline then
+        enter_inline_edit()
+      else
         require("beads.edit").open_description(state.issue)
       end
     end,
@@ -537,9 +566,10 @@ function M.open(id, opts)
   end)
 end
 
---- Refetch and re-render the currently shown issue (no-op when closed).
+--- Refetch and re-render the currently shown issue (no-op when closed or while
+--- the inline editor owns the window).
 function M.refresh()
-  if not is_open() or not state.issue then
+  if not is_open() or not state.issue or inline_edit.is_active() then
     return
   end
   local id = state.issue.id

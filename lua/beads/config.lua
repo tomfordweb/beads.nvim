@@ -22,6 +22,7 @@
 ---@field mappings BeadsMappings
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
+---@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[] }
 ---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[] }
 ---@field helpbar boolean
 ---@field notify boolean
@@ -111,6 +112,20 @@ local defaults = {
     edit = { width = 0.7, height = 0.6 }, -- also used by the memory edit float
     palette = { width = 0.7 }, -- content-sized height
     graph = { width = 0.8 }, -- content-sized height
+  },
+  -- Inline description editing (the `e` key in the detail view). When
+  -- inline=true the description is edited in-place inside the detail float;
+  -- inline=false falls back to the separate edit float (beads.edit).
+  edit = {
+    inline = true,
+    discard_on_quit = false, -- :q saves before returning to the detail view
+    autosave = false, -- debounced save while typing
+    autosave_debounce_ms = 800,
+    persistent_undo = false, -- keep undo history across edit sessions
+    undodir = nil, -- defaults to stdpath("state")/beads/undo
+    -- normal-mode keys to neutralize inside the edit buffer only, so a global
+    -- map (e.g. oil.nvim's "-") can't fire mid-edit. Insert mode is untouched.
+    guard_keys = {},
   },
   -- linked-issues sidebar next to the detail view
   sidebar = {

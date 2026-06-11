@@ -80,6 +80,11 @@ M.PANES = {
     { key = ":w", label = "save" },
     { key = ":q", label = "close" },
   },
+  view_edit = {
+    { key = ":w", label = "save" },
+    { key = ":wq", label = "save+back" },
+    { key = ":q", label = "back" },
+  },
   memory_edit = {
     { key = ":w", label = "save" },
     { key = ":q", label = "close" },
