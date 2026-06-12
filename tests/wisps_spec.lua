@@ -34,6 +34,13 @@ describe("render.wisp_lines", function()
     assert.equals(3, links)
   end)
 
+  it("never emits a highlight past its line, even at a tiny width", function()
+    local lines, hls = render.wisp_lines(list, types, 8)
+    for _, h in ipairs(hls) do
+      assert.is_true(h.col_end <= #lines[h.lnum + 1], "highlight col_end overflows line")
+    end
+  end)
+
   it("shows an explanatory placeholder when there are no wisps", function()
     local lines, _, rows = render.wisp_lines({}, types, 60)
     assert.matches("No wisps", lines[1])

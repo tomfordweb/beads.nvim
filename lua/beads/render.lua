@@ -512,14 +512,21 @@ function M.board_column_lines(group, width)
     return lines, hls, rows
   end
   for _, issue in ipairs(group.items) do
-    local head = (" %s %s  %s"):format(
-      issues.status_icon(issue.status),
-      issue.id,
-      issues.priority_label(issue.priority)
+    -- truncate first, then locate the id in the final text: a narrow column can
+    -- clip the id, and a highlight spanning past the clipped line is an extmark
+    -- "out of range" error. find() on the truncated text only matches an intact
+    -- id, so a clipped id simply renders unlinked.
+    local text = truncate(
+      (" %s %s  %s"):format(
+        issues.status_icon(issue.status),
+        issue.id,
+        issues.priority_label(issue.priority)
+      ),
+      width
     )
-    add_line(lines, hls, truncate(head, width), issue.status == "closed" and "Comment" or nil)
+    add_line(lines, hls, text, issue.status == "closed" and "Comment" or nil)
     rows[#lines] = issue.id
-    local id_start = head:find(issue.id, 1, true)
+    local id_start = text:find(issue.id, 1, true)
     if id_start then
       table.insert(hls, {
         lnum = #lines - 1,
@@ -557,13 +564,18 @@ function M.wisp_lines(list, types, width)
       end
       add_line(lines, hls, ("%s (%d)"):format(t, #items), "BeadsSection")
       for _, w in ipairs(items) do
-        local text = (" %s %s  %s  %s"):format(
-          issues.status_icon(w.status),
-          w.id,
-          issues.priority_label(w.priority),
-          w.title or ""
+        -- truncate before locating the id (see board_column_lines): a clipped
+        -- id must not produce an out-of-range highlight.
+        local text = truncate(
+          (" %s %s  %s  %s"):format(
+            issues.status_icon(w.status),
+            w.id,
+            issues.priority_label(w.priority),
+            w.title or ""
+          ),
+          width
         )
-        add_line(lines, hls, truncate(text, width))
+        add_line(lines, hls, text)
         rows[#lines] = w.id
         local id_start = text:find(w.id, 1, true)
         if id_start then

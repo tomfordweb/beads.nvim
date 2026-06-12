@@ -105,6 +105,21 @@ describe("render.board_column_lines", function()
       assert.is_true(vim.fn.strdisplaywidth(l) <= 20)
     end
   end)
+
+  it("never emits a highlight past its line, even at a tiny width", function()
+    -- regression: a narrow column clips long ids; an id-link highlight spanning
+    -- past the clipped line is an extmark out-of-range error at apply time.
+    local group = {
+      status = "open",
+      items = norm({
+        { id = "beads_nvim-longidhere", title = "wide title here", status = "open" },
+      }),
+    }
+    local lines, hls = render.board_column_lines(group, 8)
+    for _, h in ipairs(hls) do
+      assert.is_true(h.col_end <= #lines[h.lnum + 1], "highlight col_end overflows line")
+    end
+  end)
 end)
 
 describe("float.columns", function()
