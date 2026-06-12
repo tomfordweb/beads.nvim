@@ -1,11 +1,38 @@
 # beads.nvim
 
-Neovim UI for [beads](https://github.com/gastownhall/beads) (`bd`) — the issue
-tracker with first-class dependency support. Browse and filter issues in
-Telescope, view and edit them in a floating detail view, and navigate
-dependency chains without leaving the editor.
+Neovim UI for [beads](https://github.com/gastownhall/beads) (`bd`) — the
+dependency-first issue tracker. Browse and filter issues in Telescope, edit
+them in a floating detail view, and walk dependency chains without leaving the
+editor.
 
-Tested against bd 1.0.4. This project tracks its own issues with beads.
+![beads.nvim — the Telescope issue browser, the editable detail view with its
+sidebar, and the dependency graph](assets/demo.gif)
+
+## Quickstart
+
+1. Install [`bd`](https://github.com/gastownhall/beads) and confirm it is on
+   your `$PATH` (`bd version` — tested against 1.0.4).
+2. Add the plugin with lazy.nvim:
+
+   ```lua
+   {
+     "tomfordweb/beads.nvim",
+     dependencies = {
+       "nvim-telescope/telescope.nvim",
+       "nvim-lua/plenary.nvim",
+     },
+     config = function()
+       require("beads").setup({ keymaps = true })
+       require("telescope").load_extension("beads")
+     end,
+   }
+   ```
+3. Open Neovim in a repo with a `.beads` store (or run `:BeadsPalette` →
+   `init`), then `:Beads` to browse — `<CR>` opens an issue, `<Tab>` toggles
+   its sidebar, `gd` follows a dependency.
+
+> Needs Neovim ≥ 0.10. Full [requirements](#requirements),
+> [configuration](#configuration), and [keymaps](#keymaps) are below.
 
 ## Features
 
@@ -77,21 +104,7 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
   lets your markdown autoformatters run on `:w`. The plugin works fully without
   it (it ships its own `Beads*` highlights).
 
-## Installation (lazy.nvim)
-
-```lua
-{
-  "tomfordweb/beads.nvim",
-  dependencies = {
-    "nvim-telescope/telescope.nvim",
-    "nvim-lua/plenary.nvim",
-  },
-  config = function()
-    require("beads").setup({ keymaps = true })
-    require("telescope").load_extension("beads")
-  end,
-}
-```
+The plugin spec is in the [Quickstart](#quickstart) above.
 
 ## Configuration
 

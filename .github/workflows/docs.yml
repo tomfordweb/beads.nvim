@@ -62,6 +62,9 @@ jobs:
         run: |
           mkdir -p docs
           cp README.md docs/index.md
+          # The README leads with assets/demo.gif (repo-root-relative); copy the
+          # asset alongside the staged index so mkdocs --strict resolves it.
+          cp -r assets docs/assets
 
       - name: Build site
         run: mkdocs build --strict

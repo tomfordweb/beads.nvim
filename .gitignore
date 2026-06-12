@@ -13,8 +13,13 @@
 /docs/
 /site/
 
-# Local launch/marketing notes — never published.
+# Local launch/marketing notes + internal audits — never published.
 /notes/
+/docs-internal/
+
+# Frames extracted from the demo GIF while iterating on the recording (E9).
+# The committed asset is assets/demo.gif; the per-frame PNGs are throwaway.
+/assets/frame_*.png
 
 # Local MCP config: machine-specific absolute paths (never publish).
 /.mcp.json
