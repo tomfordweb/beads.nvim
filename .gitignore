@@ -13,6 +13,5 @@
 /docs/
 /site/
 
-# Raw asciinema casts are large and regenerable (launch/scripts/record.sh);
-# only the curated GIFs/PNGs under launch/assets/ are tracked.
-/launch/casts/
+# Local launch/marketing notes — never published.
+/notes/
