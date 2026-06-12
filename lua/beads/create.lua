@@ -53,7 +53,10 @@ end
 
 local function step_deps(form)
   vim.ui.input({ prompt = "Deps (e.g. blocks:bd-15,bd-20 — empty to skip): " }, function(input)
-    form.deps = input -- nil on abort is fine; build_create_args skips empty
+    if input == nil then
+      return -- <Esc> aborts the whole form, like every other step
+    end
+    form.deps = input -- "" skips; build_create_args drops empty deps
     submit(form)
   end)
 end
@@ -81,6 +84,7 @@ end
 
 --- Interactive create form: title -> type -> priority -> deps -> bd create.
 function M.open_form()
+  issues.prefetch() -- warm the types list while the user types the title
   vim.ui.input({ prompt = "Title: " }, function(title)
     if not title or title == "" then
       return

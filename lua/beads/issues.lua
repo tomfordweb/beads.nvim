@@ -13,32 +13,80 @@ M.PRIORITIES = { 0, 1, 2, 3, 4 }
 
 -- Lazily fetched per session; _reset_lists() clears for tests.
 local lists = { statuses = nil, types = nil, status_icons = {} }
+local prefetched = false
 
 function M._reset_lists()
   lists = { statuses = nil, types = nil, status_icons = {} }
+  prefetched = false
+end
+
+--- Cache `bd statuses --json` output (names + bd's own icons as a fallback
+--- icon source). Empty result -> nil so callers fall back to M.STATUSES.
+---@param raw any decoded bd statuses --json
+---@return string[]|nil
+local function parse_statuses(raw)
+  if type(raw) ~= "table" then
+    return nil
+  end
+  local out = {}
+  for _, s in ipairs(raw.built_in_statuses or {}) do
+    if type(s.name) == "string" then
+      table.insert(out, s.name)
+      if type(s.icon) == "string" then
+        lists.status_icons[s.name] = s.icon
+      end
+    end
+  end
+  return #out > 0 and out or nil
+end
+
+---@param raw any decoded bd types --json
+---@return string[]|nil
+local function parse_types(raw)
+  if type(raw) ~= "table" then
+    return nil
+  end
+  local out = {}
+  for _, t in ipairs(raw.core_types or {}) do
+    if type(t.name) == "string" then
+      table.insert(out, t.name)
+    end
+  end
+  return #out > 0 and out or nil
+end
+
+--- Fire-and-forget async warm of the statuses/types caches, so the sync
+--- accessors below (called from keymap/form callbacks) find them populated
+--- and never block the UI on a bd round-trip. Runs at most once per session;
+--- failures leave the caches empty for the sync fallback path.
+function M.prefetch()
+  if prefetched or (lists.statuses and lists.types) then
+    return
+  end
+  prefetched = true
+  local cli = require("beads.cli")
+  cli.run_json({ "statuses" }, function(ok, raw)
+    if ok and not lists.statuses then
+      lists.statuses = parse_statuses(raw)
+    end
+  end, { quiet = true })
+  cli.run_json({ "types" }, function(ok, raw)
+    if ok and not lists.types then
+      lists.types = parse_types(raw)
+    end
+  end, { quiet = true })
 end
 
 --- Status names from `bd statuses --json` (cached; falls back to M.STATUSES
---- when bd is unavailable). Also caches bd's own status icons as a fallback
---- icon source for statuses the config table doesn't know.
+--- when bd is unavailable). Prefer warming via M.prefetch() — the sync fetch
+--- here only runs when the cache is still cold.
 ---@return string[]
 function M.statuses()
   if lists.statuses then
     return lists.statuses
   end
-  local out = {}
-  local ok, raw = require("beads.cli").run_sync({ "statuses" }, { json = true })
-  if ok and type(raw) == "table" then
-    for _, s in ipairs(raw.built_in_statuses or {}) do
-      if type(s.name) == "string" then
-        table.insert(out, s.name)
-        if type(s.icon) == "string" then
-          lists.status_icons[s.name] = s.icon
-        end
-      end
-    end
-  end
-  lists.statuses = #out > 0 and out or vim.deepcopy(M.STATUSES)
+  local _, raw = require("beads.cli").run_sync({ "statuses" }, { json = true })
+  lists.statuses = parse_statuses(raw) or vim.deepcopy(M.STATUSES)
   return lists.statuses
 end
 
@@ -48,16 +96,8 @@ function M.types()
   if lists.types then
     return lists.types
   end
-  local out = {}
-  local ok, raw = require("beads.cli").run_sync({ "types" }, { json = true })
-  if ok and type(raw) == "table" then
-    for _, t in ipairs(raw.core_types or {}) do
-      if type(t.name) == "string" then
-        table.insert(out, t.name)
-      end
-    end
-  end
-  lists.types = #out > 0 and out or vim.deepcopy(M.TYPES)
+  local _, raw = require("beads.cli").run_sync({ "types" }, { json = true })
+  lists.types = parse_types(raw) or vim.deepcopy(M.TYPES)
   return lists.types
 end
 

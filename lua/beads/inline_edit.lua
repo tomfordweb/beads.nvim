@@ -171,14 +171,22 @@ end
 -- :w / :wq / :q / :x intercepts so the editor's quit verbs return to the
 -- read-only detail view instead of closing the whole float (M5). Buffer-local
 -- command-line abbreviations keep muscle memory working; ZZ/ZQ mirror them.
+-- Each abbreviation is guarded so it only fires when the verb is the whole
+-- command — `:%s/foo/w bar/` or `:vert w` typed in the edit buffer stay as-is.
 local function setup_quit_maps(buf)
-  vim.api.nvim_buf_call(buf, function()
-    vim.cmd([[cnoreabbrev <buffer> w  lua require('beads.inline_edit').cmd_write()]])
-    vim.cmd([[cnoreabbrev <buffer> wq lua require('beads.inline_edit').cmd_save_exit()]])
-    vim.cmd([[cnoreabbrev <buffer> x  lua require('beads.inline_edit').cmd_save_exit()]])
-    vim.cmd([[cnoreabbrev <buffer> q  lua require('beads.inline_edit').cmd_quit()]])
-    vim.cmd([[cnoreabbrev <buffer> q! lua require('beads.inline_edit').cmd_discard_exit()]])
-  end)
+  local function cabbrev(lhs, fn_name)
+    vim.keymap.set("ca", lhs, function()
+      if vim.fn.getcmdtype() == ":" and vim.fn.getcmdline() == lhs then
+        return ("lua require('beads.inline_edit').%s()"):format(fn_name)
+      end
+      return lhs
+    end, { buffer = buf, expr = true })
+  end
+  cabbrev("w", "cmd_write")
+  cabbrev("wq", "cmd_save_exit")
+  cabbrev("x", "cmd_save_exit")
+  cabbrev("q", "cmd_quit")
+  cabbrev("q!", "cmd_discard_exit")
   vim.keymap.set("n", "ZZ", function()
     M.cmd_save_exit()
   end, { buffer = buf, nowait = true, silent = true, desc = "Beads: save + back" })

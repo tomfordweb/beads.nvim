@@ -8,6 +8,7 @@ describe("beads.create", function()
 
   before_each(function()
     config.setup({ cwd = "/tmp" })
+    require("beads.issues")._reset_lists() -- so the prefetch state is per-test
     recorded = {}
     cli._runner = function(argv, sys_opts, on_exit)
       table.insert(recorded, { argv = argv, sys_opts = sys_opts })
@@ -78,6 +79,14 @@ describe("beads.create", function()
     create.open_form()
     drain()
     package.loaded["beads.view"] = nil
+    -- open_form also fires the async statuses/types prefetch; pick out the
+    -- create call rather than relying on call order
+    local create_call
+    for _, call in ipairs(recorded) do
+      if call.argv[2] == "create" then
+        create_call = call
+      end
+    end
     assert.are.same({
       "bd",
       "create",
@@ -89,7 +98,31 @@ describe("beads.create", function()
       "--deps",
       "blocks:bd-15",
       "--json",
-    }, recorded[1].argv)
+    }, create_call and create_call.argv)
+  end)
+
+  it("form aborts when the deps prompt is cancelled", function()
+    vim.ui.input = function(opts, cb)
+      if opts.prompt:match("^Title") then
+        cb("new feature")
+      else
+        cb(nil) -- <Esc> at the deps prompt
+      end
+    end
+    vim.ui.select = function(items, opts, cb)
+      if opts.prompt == "Type" then
+        cb("feature")
+      else
+        cb(items[1], 1)
+      end
+    end
+    create.open_form()
+    vim.wait(100, function()
+      return false
+    end, 5)
+    for _, call in ipairs(recorded) do
+      assert.is_not.equal("create", call.argv[2])
+    end
   end)
 
   it("form aborts when title empty", function()
@@ -100,6 +133,9 @@ describe("beads.create", function()
     vim.wait(100, function()
       return false
     end, 5)
-    assert.equals(0, #recorded)
+    -- only the fire-and-forget prefetch may run; no create call
+    for _, call in ipairs(recorded) do
+      assert.is_not.equal("create", call.argv[2])
+    end
   end)
 end)

@@ -231,6 +231,7 @@ what you need.
 require("beads").setup({
   bd_bin = "bd",            -- path to the bd binary
   cwd = nil,                -- nil: walk up from current buffer for .beads/
+  sync_timeout_ms = 5000,   -- kill a hung synchronous bd call after this long
   list_limit = 200,         -- bd list -n
   default_filters = { status = nil, priority = nil, type = nil, all = false },
 

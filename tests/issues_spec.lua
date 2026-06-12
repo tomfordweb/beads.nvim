@@ -294,6 +294,53 @@ describe("issues.statuses / issues.types", function()
     assert.is_truthy(vim.tbl_contains(issues.STATUSES, "deferred"))
     assert.is_truthy(vim.tbl_contains(issues.TYPES, "decision"))
   end)
+
+  it("prefetch warms both caches so the sync accessors never shell out", function()
+    local sync_calls = 0
+    cli.run_sync = function()
+      sync_calls = sync_calls + 1
+      return false, nil, "must not be called"
+    end
+    local real_run_json = cli.run_json
+    cli.run_json = function(args, cb)
+      if args[1] == "statuses" then
+        cb(true, { built_in_statuses = { { name = "open" }, { name = "hooked" } } })
+      else
+        cb(true, { core_types = { { name = "task" }, { name = "spike" } } })
+      end
+    end
+    issues.prefetch()
+    cli.run_json = real_run_json
+    assert.are.same({ "open", "hooked" }, issues.statuses())
+    assert.are.same({ "task", "spike" }, issues.types())
+    assert.equals(0, sync_calls)
+  end)
+
+  it("prefetch fires its two fetches at most once per session", function()
+    local calls = 0
+    local real_run_json = cli.run_json
+    cli.run_json = function(_, cb)
+      calls = calls + 1
+      cb(false, nil, "down")
+    end
+    issues.prefetch()
+    issues.prefetch()
+    cli.run_json = real_run_json
+    assert.equals(2, calls) -- statuses + types once, not per call
+  end)
+
+  it("prefetch failure leaves the sync fallback path intact", function()
+    local real_run_json = cli.run_json
+    cli.run_json = function(_, cb)
+      cb(false, nil, "down")
+    end
+    issues.prefetch()
+    cli.run_json = real_run_json
+    cli.run_sync = function()
+      return false, nil, "no bd"
+    end
+    assert.are.same(issues.STATUSES, issues.statuses())
+  end)
 end)
 
 describe("issues.status_icon", function()

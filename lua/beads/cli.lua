@@ -36,8 +36,9 @@ end
 ---@param args string[] argv tail (without bd binary)
 ---@param input string|nil stdin payload
 ---@param decode_json boolean
+---@param quiet boolean|nil suppress the error notification (caller handles it)
 ---@param cb fun(ok: boolean, result: any, err: string|nil)
-local function run(args, input, decode_json, cb)
+local function run(args, input, decode_json, quiet, cb)
   local argv = argv_for(args)
   if decode_json then
     table.insert(argv, "--json")
@@ -50,7 +51,9 @@ local function run(args, input, decode_json, cb)
     vim.schedule(function()
       if out.code ~= 0 then
         local err = out.stderr or ""
-        vim.notify(("bd %s failed:\n%s"):format(args[1] or "", err), vim.log.levels.ERROR)
+        if not quiet then
+          vim.notify(("bd %s failed:\n%s"):format(args[1] or "", err), vim.log.levels.ERROR)
+        end
         cb(false, nil, err)
         return
       end
@@ -61,7 +64,9 @@ local function run(args, input, decode_json, cb)
       local ok, decoded = pcall(vim.json.decode, out.stdout or "")
       if not ok then
         local err = "bd returned invalid JSON: " .. tostring(decoded)
-        vim.notify(err, vim.log.levels.ERROR)
+        if not quiet then
+          vim.notify(err, vim.log.levels.ERROR)
+        end
         cb(false, nil, err)
         return
       end
@@ -73,15 +78,16 @@ end
 --- Run bd with --json appended; cb receives the decoded value.
 ---@param args string[]
 ---@param cb fun(ok: boolean, result: any, err: string|nil)
-function M.run_json(args, cb)
-  run(args, nil, true, cb)
+---@param opts { quiet: boolean|nil }|nil quiet skips the failure notification
+function M.run_json(args, cb, opts)
+  run(args, nil, true, opts and opts.quiet, cb)
 end
 
 --- Run bd without --json; cb receives raw stdout.
 ---@param args string[]
 ---@param cb fun(ok: boolean, stdout: string|nil, err: string|nil)
 function M.run_plain(args, cb)
-  run(args, nil, false, cb)
+  run(args, nil, false, nil, cb)
 end
 
 --- Run bd with stdin payload (e.g. `update <id> --body-file -`).
@@ -89,12 +95,14 @@ end
 ---@param input string
 ---@param cb fun(ok: boolean, stdout: string|nil, err: string|nil)
 function M.run_stdin(args, input, cb)
-  run(args, input, false, cb)
+  run(args, input, false, nil, cb)
 end
 
---- Synchronous variant for tests and simple scripts.
+--- Synchronous variant for tests and simple scripts. Bounded by
+--- `sync_timeout_ms` so a hung bd (e.g. a Dolt lock) can never freeze the
+--- editor indefinitely — :wait(timeout) kills the process on expiry.
 ---@param args string[]
----@param opts { json: boolean|nil, input: string|nil, cwd: string|nil }|nil
+---@param opts { json: boolean|nil, input: string|nil, cwd: string|nil, timeout: integer|nil }|nil
 ---@return boolean ok, any result, string|nil err
 function M.run_sync(args, opts)
   opts = opts or {}
@@ -106,7 +114,12 @@ function M.run_sync(args, opts)
   if opts.input ~= nil then
     sys_opts.stdin = opts.input
   end
-  local out = vim.system(argv, sys_opts):wait()
+  local timeout = opts.timeout or config.get().sync_timeout_ms
+  local out = vim.system(argv, sys_opts):wait(timeout)
+  -- :wait(timeout) kills the process with SIGKILL and reports code 124
+  if out.code == 124 and out.signal == 9 then
+    return false, nil, ("bd %s timed out after %dms"):format(args[1] or "", timeout)
+  end
   if out.code ~= 0 then
     return false, nil, out.stderr
   end

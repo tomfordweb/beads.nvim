@@ -185,6 +185,25 @@ local function set_content(issue, comments, children)
   update_sidebar(issue)
 end
 
+-- Run each fn(done) concurrently; cb fires once after every fn called done.
+-- Lets the independent bd fetches behind a render overlap instead of
+-- queueing serially (open latency = slowest call, not the sum).
+local function join(fns, cb)
+  local pending = #fns
+  if pending == 0 then
+    cb()
+    return
+  end
+  for _, fn in ipairs(fns) do
+    fn(function()
+      pending = pending - 1
+      if pending == 0 then
+        cb()
+      end
+    end)
+  end
+end
+
 -- Epics show a Children section in the body; non-epics skip the extra call.
 local function with_children(issue, cb)
   if issue.issue_type ~= "epic" then
@@ -275,10 +294,40 @@ update_sidebar = function(issue, focus)
   end
   local sidebar_cfg = config.get().sidebar
 
-  local function show(links)
+  local dependents, history_rows
+  local fetches = {
+    function(done)
+      cli.run_json({ "dep", "list", issue.id, "--direction=up" }, function(ok, deps)
+        dependents = ok and deps or nil
+        done()
+      end)
+    end,
+  }
+  -- Surface the last-N change rows inline (M3); skip the extra bd call when
+  -- the section is disabled.
+  if vim.tbl_contains(sidebar_cfg.sections or {}, "history") then
+    table.insert(fetches, function(done)
+      cli.run_json({ "history", issue.id }, function(hok, entries)
+        if hok and type(entries) == "table" then
+          history_rows = require("beads.history").recent(entries, sidebar_cfg.history_limit or 3)
+        end
+        done()
+      end)
+    end)
+  end
+
+  join(fetches, function()
     if not is_open() or not state.issue or state.issue.id ~= issue.id then
       return
     end
+    local links = issues.partition_links(issue, dependents or {})
+    -- comments render in the sidebar; epics get their richer `bd children`
+    -- rows (fetched for the body in legacy mode) over dependency-derived ones
+    links.comments = state.comments
+    if state.children and #state.children > 0 then
+      links.children = state.children
+    end
+    links.history = history_rows
     local _, sb = layout()
     if sb then
       sidebar.open(issue, links, sb, sidebar_callbacks)
@@ -286,31 +335,6 @@ update_sidebar = function(issue, focus)
         sidebar.focus()
       end
     end
-  end
-
-  cli.run_json({ "dep", "list", issue.id, "--direction=up" }, function(ok, dependents)
-    if not is_open() or not state.issue or state.issue.id ~= issue.id then
-      return
-    end
-    local links = issues.partition_links(issue, ok and dependents or {})
-    -- comments render in the sidebar; epics get their richer `bd children`
-    -- rows (fetched for the body in legacy mode) over dependency-derived ones
-    links.comments = state.comments
-    if state.children and #state.children > 0 then
-      links.children = state.children
-    end
-    -- Surface the last-N change rows inline (M3); skip the extra bd call when
-    -- the section is disabled.
-    if not vim.tbl_contains(sidebar_cfg.sections or {}, "history") then
-      show(links)
-      return
-    end
-    cli.run_json({ "history", issue.id }, function(hok, entries)
-      if hok and type(entries) == "table" then
-        links.history = require("beads.history").recent(entries, sidebar_cfg.history_limit or 3)
-      end
-      show(links)
-    end)
   end)
 end
 
@@ -713,6 +737,7 @@ end
 ---@param opts { on_close: fun()|nil }|nil on_close runs after the float closes
 function M.open(id, opts)
   render.define_highlights()
+  issues.prefetch() -- warm statuses/types for the status action's vim.ui.select
   cli.run_json({ "show", id }, function(ok, result)
     if not ok or not result or not result[1] then
       if ok then
@@ -721,24 +746,36 @@ function M.open(id, opts)
       return
     end
     local issue = issues.normalize(result[1])
-    cli.run_json({ "comments", id }, function(cok, comments)
-      with_children(issue, function(children)
-        ensure_float(id)
-        if opts and opts.on_close then
-          state.on_close = opts.on_close
+    local comments, children
+    join({
+      function(done)
+        cli.run_json({ "comments", id }, function(cok, c)
+          comments = cok and c or nil
+          done()
+        end)
+      end,
+      function(done)
+        with_children(issue, function(ch)
+          children = ch
+          done()
+        end)
+      end,
+    }, function()
+      ensure_float(id)
+      if opts and opts.on_close then
+        state.on_close = opts.on_close
+      end
+      set_content(issue, comments, children)
+      -- Lifecycle hook: fire once on the initial open of an id (M.refresh
+      -- re-renders never reach here). pcall so a user error can't break the
+      -- view; surface it as a warning instead.
+      local on_open = config.get().hooks and config.get().hooks.on_open
+      if on_open then
+        local hook_ok, err = pcall(on_open, issue)
+        if not hook_ok then
+          vim.notify("beads: hooks.on_open error: " .. tostring(err), vim.log.levels.WARN)
         end
-        set_content(issue, cok and comments or nil, children)
-        -- Lifecycle hook: fire once on the initial open of an id (M.refresh
-        -- re-renders never reach here). pcall so a user error can't break the
-        -- view; surface it as a warning instead.
-        local on_open = config.get().hooks and config.get().hooks.on_open
-        if on_open then
-          local hook_ok, err = pcall(on_open, issue)
-          if not hook_ok then
-            vim.notify("beads: hooks.on_open error: " .. tostring(err), vim.log.levels.WARN)
-          end
-        end
-      end)
+      end
     end)
   end)
 end
@@ -760,12 +797,24 @@ function M.refresh()
       return
     end
     local issue = issues.normalize(result[1])
-    cli.run_json({ "comments", id }, function(cok, comments)
-      with_children(issue, function(children)
-        if is_open() then
-          set_content(issue, cok and comments or nil, children)
-        end
-      end)
+    local comments, children
+    join({
+      function(done)
+        cli.run_json({ "comments", id }, function(cok, c)
+          comments = cok and c or nil
+          done()
+        end)
+      end,
+      function(done)
+        with_children(issue, function(ch)
+          children = ch
+          done()
+        end)
+      end,
+    }, function()
+      if is_open() then
+        set_content(issue, comments, children)
+      end
     end)
   end)
 end

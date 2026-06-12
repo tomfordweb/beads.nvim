@@ -481,25 +481,41 @@ function M.link_spans(lines)
   return hls
 end
 
---- Define default highlight groups (links); called once at plugin load.
-function M.define_highlights()
-  local links = {
-    BeadsTitle = "Title",
-    BeadsId = "Identifier",
-    BeadsMeta = "Comment",
-    BeadsSection = "Function",
-    BeadsHelp = "NonText",
-    BeadsHelpKey = "Special",
-    BeadsLink = "Underlined",
-    BeadsStatusOpen = "DiagnosticInfo",
-    BeadsStatusInProgress = "DiagnosticWarn",
-    BeadsStatusBlocked = "DiagnosticError",
-    BeadsStatusClosed = "Comment",
-    BeadsStatusDeferred = "NonText",
-  }
-  for group, link in pairs(links) do
+local HL_LINKS = {
+  BeadsTitle = "Title",
+  BeadsId = "Identifier",
+  BeadsMeta = "Comment",
+  BeadsSection = "Function",
+  BeadsHelp = "NonText",
+  BeadsHelpKey = "Special",
+  BeadsLink = "Underlined",
+  BeadsStatusOpen = "DiagnosticInfo",
+  BeadsStatusInProgress = "DiagnosticWarn",
+  BeadsStatusBlocked = "DiagnosticError",
+  BeadsStatusClosed = "Comment",
+  BeadsStatusDeferred = "NonText",
+}
+
+local function apply_highlights()
+  for group, link in pairs(HL_LINKS) do
     vim.api.nvim_set_hl(0, group, { link = link, default = true })
   end
+end
+
+--- Define default highlight groups (links). Call sites invoke this on every
+--- surface open as lazy init; after the first call it is free. A ColorScheme
+--- autocmd re-applies the links since `hi clear` wipes them.
+local highlights_defined = false
+function M.define_highlights()
+  if highlights_defined then
+    return
+  end
+  highlights_defined = true
+  apply_highlights()
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("beads_highlights", { clear = true }),
+    callback = apply_highlights,
+  })
 end
 
 return M

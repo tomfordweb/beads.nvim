@@ -26,7 +26,8 @@ function M.check()
 
   local bd_bin = require("beads.config").get().bd_bin
   if vim.fn.executable(bd_bin) == 1 then
-    local out = vim.system({ bd_bin, "--version" }, { text = true }):wait()
+    -- bounded so a hung bd can't freeze :checkhealth
+    local out = vim.system({ bd_bin, "--version" }, { text = true }):wait(5000)
     local version = vim.trim(out.stdout or "")
     if out.code == 0 and version ~= "" then
       health.ok(version)

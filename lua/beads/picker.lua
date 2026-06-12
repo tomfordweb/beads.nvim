@@ -35,6 +35,9 @@ end
 -- or false when the fetch failed. Cleared on every M.open.
 local preview_cache = {}
 
+-- Keystrokes within this window coalesce into one `bd search` call.
+local SEARCH_DEBOUNCE_MS = 120
+
 local function make_entry_maker()
   local entry_display = require("telescope.pickers.entry_display")
   local displayer = entry_display.create({
@@ -135,7 +138,8 @@ local function title_for(filters, source)
 end
 
 --- Live search picker over `bd search` (covers description text the
---- cached fuzzy picker can't reach). Re-queries bd on every prompt change.
+--- cached fuzzy picker can't reach). Re-queries bd as the prompt changes,
+--- asynchronously and debounced so typing never blocks on bd.
 ---@param opts { default_text: string|nil }|nil
 function M.search(opts)
   opts = opts or {}
@@ -156,22 +160,56 @@ function M.search(opts)
     return help ~= "" and (base .. " │ " .. help) or base
   end
 
-  local finder = finders.new_dynamic({
-    entry_maker = make_entry_maker(),
-    fn = function(prompt)
+  -- Async finder implementing telescope's finder protocol directly (callable
+  -- + close), instead of finders.new_dynamic whose fn must return
+  -- synchronously: each prompt change debounces, then runs `bd search` in the
+  -- background and streams entries in on completion. A generation counter
+  -- drops responses whose prompt is stale. The UI thread never blocks on bd.
+  local entry_maker = make_entry_maker()
+  local gen = 0
+  local timer = assert(vim.uv.new_timer())
+  local finder = setmetatable({
+    close = function() -- telescope calls this when the picker closes
+      timer:stop()
+      if not timer:is_closing() then
+        timer:close()
+      end
+    end,
+  }, {
+    __call = function(_, prompt, process_result, process_complete)
+      gen = gen + 1
+      local this = gen
+      timer:stop()
       if not prompt or vim.trim(prompt) == "" then
-        return {}
+        process_complete()
+        return
       end
-      local ok, results =
-        cli.run_sync(issues.build_search_args(prompt, { all = include_closed }), { json = true })
-      if not ok or type(results) ~= "table" then
-        return {}
-      end
-      local out = {}
-      for _, r in ipairs(results) do
-        table.insert(out, issues.normalize(r))
-      end
-      return out
+      timer:start(SEARCH_DEBOUNCE_MS, 0, function()
+        -- timer callbacks run in a fast context; bd + buffer APIs need the
+        -- main loop
+        vim.schedule(function()
+          if this ~= gen then
+            return
+          end
+          cli.run_json(
+            issues.build_search_args(prompt, { all = include_closed }),
+            function(ok, results)
+              if this ~= gen then
+                return
+              end
+              if ok and type(results) == "table" then
+                for _, r in ipairs(results) do
+                  -- process_result returns true when the picker has moved on
+                  if process_result(entry_maker(issues.normalize(r))) then
+                    return
+                  end
+                end
+              end
+              process_complete()
+            end
+          )
+        end)
+      end)
     end,
   })
 
@@ -236,6 +274,9 @@ function M.open(opts)
   end
 
   preview_cache = {}
+  -- warm the statuses/types caches so the filter-cycle mappings bound in
+  -- _open_picker never hit the synchronous fetch path
+  issues.prefetch()
 
   cli.run_json(fetch_args, function(ok, raw)
     if not ok then
@@ -315,22 +356,26 @@ function M._open_picker(all_issues, filters, source, picker_opts)
           end
         end
 
+        -- values may be a function (statuses/types) resolved at keypress so
+        -- the async prefetch has landed by then — building the picker never
+        -- waits on bd
         local function cycle_filter(key, values)
           return function()
-            filters[key] = issues.cycle(filters[key], values)
+            local vals = type(values) == "function" and values() or values
+            filters[key] = issues.cycle(filters[key], vals)
             refresh(prompt_bufnr)
           end
         end
 
         if source ~= "ready" then
-          map_action(map, m.status, cycle_filter("status", issues.statuses()))
+          map_action(map, m.status, cycle_filter("status", issues.statuses))
           map_action(map, m.closed, function()
             filters.all = not filters.all
             refresh(prompt_bufnr)
           end)
         end
         map_action(map, m.priority, cycle_filter("priority", issues.PRIORITIES))
-        map_action(map, m.type, cycle_filter("type", issues.types()))
+        map_action(map, m.type, cycle_filter("type", issues.types))
         -- label values track the loaded issues, recomputed each cycle so a
         -- refetch that adds/removes labels stays in sync
         map_action(map, m.label, function()

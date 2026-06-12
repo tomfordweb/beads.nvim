@@ -96,6 +96,28 @@ describe("beads.cli", function()
     assert.equals(1, #notifications)
   end)
 
+  it("run_sync kills a hung process at the timeout and reports it", function()
+    -- real vim.system path: "bd" is `sleep`, so the call would hang for 10s;
+    -- the 100ms timeout must kill it and surface a timeout error instead
+    config.setup({ bd_bin = "sleep", cwd = "/tmp" })
+    local ok, result, err = cli.run_sync({ "10" }, { timeout = 100 })
+    assert.is_false(ok)
+    assert.is_nil(result)
+    assert.is_truthy(err:match("timed out after 100ms"))
+  end)
+
+  it("run_json with quiet suppresses the failure notification", function()
+    fake_out = { code = 1, stdout = "", stderr = "boom" }
+    local got
+    cli.run_json({ "statuses" }, function(ok, _, err)
+      got = { ok = ok, err = err }
+    end, { quiet = true })
+    drain()
+    assert.is_false(got.ok)
+    assert.equals("boom", got.err)
+    assert.equals(0, #notifications)
+  end)
+
   it("uses config.runner when provided", function()
     local used = false
     config.setup({

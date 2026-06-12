@@ -24,6 +24,7 @@
 ---@class BeadsConfig
 ---@field bd_bin string
 ---@field cwd string|nil
+---@field sync_timeout_ms integer
 ---@field list_limit integer
 ---@field default_filters { status: string|nil, priority: integer|nil, type: string|nil, all: boolean }
 ---@field picker { theme: string|false, theme_opts: table, telescope: table }
@@ -48,6 +49,9 @@ local M = {}
 local defaults = {
   bd_bin = "bd",
   cwd = nil,
+  -- Upper bound for the few synchronous bd calls (cli.run_sync); a hung bd
+  -- is killed after this long instead of freezing the editor.
+  sync_timeout_ms = 5000,
   list_limit = 200,
   default_filters = { status = nil, priority = nil, type = nil, all = false },
   -- theme: "ivy" | "dropdown" | "cursor" | false (use your telescope defaults);
