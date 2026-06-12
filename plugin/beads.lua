@@ -47,6 +47,10 @@ cmd("BeadsWisps", function()
   require("beads.wisps").open()
 end, { desc = "Beads: browse ephemeral wisps" })
 
+cmd("BeadsFormulas", function()
+  require("beads.formulas").open()
+end, { desc = "Beads: browse formulas / pour molecules" })
+
 cmd("BeadsSearch", function(o)
   require("beads.picker").search({ default_text = o.args ~= "" and o.args or nil })
 end, { nargs = "?", desc = "Beads: live search (bd search)" })

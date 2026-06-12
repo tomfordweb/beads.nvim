@@ -44,12 +44,17 @@ M.commands = {
     },
   },
   { label = "count — count open issues", args = { "count" } },
+  { label = "formula list — workflow templates available to pour", args = { "formula", "list" } },
+  { label = "mol current — your position in a molecule workflow", args = { "mol", "current" } },
+  { label = "mol progress — molecule completion summary", args = { "mol", "progress" } },
   { label = "init — create .beads db in project dir", args = { "init" }, confirm = true },
 }
 
+--- Render bd stdout in a scratch output float (used by the palette and the
+--- formulas picker's "show" action).
 ---@param text string
 ---@param title string
-local function show_output(text, title)
+function M.show_output(text, title)
   render.define_highlights()
   local lines = vim.split(render.strip_ansi(text), "\n", { plain = true })
   -- trim trailing blank lines
@@ -93,7 +98,7 @@ end
 local function dispatch(args)
   cli.run_plain(args, function(ok, stdout)
     if ok then
-      show_output(stdout or "", table.concat(args, " "))
+      M.show_output(stdout or "", table.concat(args, " "))
     end
   end)
 end

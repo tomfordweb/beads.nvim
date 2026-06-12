@@ -114,6 +114,12 @@ M.actions = {
       require("beads.wisps").open()
     end,
   },
+  formulas = {
+    desc = "browse formulas / pour molecules",
+    fn = function()
+      require("beads.formulas").open()
+    end,
+  },
 }
 
 --- Resolve a menus value (action name, function, or { desc, fn } table)

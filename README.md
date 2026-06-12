@@ -145,6 +145,10 @@ the all-issues view, and `gd` follows any id straight to its issue.
 - **Wisps** — `:BeadsWisps` (or the `<leader>bd` menu `w`) lists bd's ephemeral
   agent-runtime issues grouped by type; `p` promotes one to a permanent bead
   (`bd promote`). Niche — most users never need it.
+- **Formulas / molecules** — `:BeadsFormulas` (or the `<leader>bd` menu `f`)
+  lists bd's workflow formulas; pick one to show its structure or pour it into a
+  persistent molecule (`bd mol pour`, with `--var` substitutions). `mol current`
+  / `mol progress` are also in the command palette.
 
 ## Requirements
 
@@ -440,6 +444,10 @@ keymaps = {
     m = "memories",    -- memory browser
     s = "search",      -- live bd search
     g = "graph",       -- dependency graph (id under cursor, else all-issues)
+    h = "dashboard",   -- home dashboard (bd stats)
+    k = "board",       -- kanban board (status columns)
+    w = "wisps",       -- ephemeral wisps browser
+    f = "formulas",    -- formulas / pour molecules
   },
 }
 ```
@@ -460,13 +468,14 @@ keymaps = {
 
 Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
 `closed`, `ready`, `create`, `quick`, `palette`, `memories`, `search`,
-`graph`.
+`graph`, `dashboard`, `board`, `wisps`, `formulas`.
 
 ## Usage
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 `:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`, `:BeadsDashboard`,
-`:BeadsBoard`, `:BeadsWisps`, `:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
+`:BeadsBoard`, `:BeadsWisps`, `:BeadsFormulas`, `:BeadsSearch [text]`,
+`:BeadsGraph [id]`. Also `:Telescope beads
 beads|ready|search|memories`.
 
 ### Picker mappings

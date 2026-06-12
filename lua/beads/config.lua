@@ -240,6 +240,7 @@ local default_keymaps = {
     h = "dashboard",
     k = "board",
     w = "wisps",
+    f = "formulas",
   },
 }
 
