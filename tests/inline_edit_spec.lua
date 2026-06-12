@@ -75,6 +75,17 @@ describe("beads.inline_edit", function()
     assert.are.same({ "line one", "line two" }, vim.api.nvim_buf_get_lines(cur, 0, -1, false))
   end)
 
+  it("deletes the hidden view buffer on abort — no leak (M1)", function()
+    local ctx = make_ctx({ id = "beads_nvim-x9s", title = "T", description = "x" })
+    inline.enter(ctx)
+    assert.is_true(inline.is_active())
+    -- enter() flipped view_buf to bufhidden=hide; simulate the float being
+    -- force-closed out from under the submode (reset_state -> abort()).
+    inline.abort()
+    assert.is_false(inline.is_active())
+    assert.is_false(vim.api.nvim_buf_is_valid(ctx.view_buf))
+  end)
+
   it("sets filetype=markdown on the edit buffer (M6)", function()
     local ctx = make_ctx({ id = "beads_nvim-x9s", title = "T", description = "x" })
     inline.enter(ctx)

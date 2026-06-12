@@ -262,8 +262,8 @@ local function teardown()
     return nil
   end
   if a.timer then
-    a.timer:stop()
     pcall(function()
+      a.timer:stop()
       a.timer:close()
     end)
     a.timer = nil
@@ -305,7 +305,14 @@ end
 --- Tear down without touching windows (the float was closed out from under
 --- us, e.g. the view's WinClosed reset). No restore, no on_exit.
 function M.abort()
-  teardown()
+  local a = teardown()
+  -- enter() set view_buf to bufhidden=hide so it survives the buffer swap; the
+  -- window is now gone, so nothing will ever wipe it. Delete it explicitly to
+  -- avoid leaking one hidden scratch buffer per aborted edit (mirrors exit(),
+  -- which restores view_buf to the window instead of deleting it).
+  if a and a.view_buf and vim.api.nvim_buf_is_valid(a.view_buf) then
+    pcall(vim.api.nvim_buf_delete, a.view_buf, { force = true })
+  end
 end
 
 -- :w — save and stay in the submode.
