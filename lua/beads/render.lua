@@ -375,6 +375,16 @@ function M.dashboard_lines(summary)
     (" %-15s %4d"):format("total", tonumber(summary.total_issues) or 0),
     "BeadsMeta"
   )
+  -- nudge: epics whose children are all closed and can be wrapped up
+  local epics_done = tonumber(summary.epics_eligible_for_closure) or 0
+  if epics_done > 0 then
+    add_line(
+      lines,
+      hls,
+      (" %-15s %4d"):format("epics to close", epics_done),
+      "BeadsStatusInProgress"
+    )
+  end
   return lines, hls
 end
 

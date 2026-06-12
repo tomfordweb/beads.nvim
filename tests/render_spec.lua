@@ -217,6 +217,15 @@ describe("render.dashboard_lines", function()
       render.dashboard_lines(nil)
     end)
   end)
+
+  it("shows an epics-to-close nudge only when > 0", function()
+    assert.is_nil(
+      find_line(render.dashboard_lines({ epics_eligible_for_closure = 0 }), "epics to close")
+    )
+    assert.is_truthy(
+      find_line(render.dashboard_lines({ epics_eligible_for_closure = 2 }), "epics to close%s+2")
+    )
+  end)
 end)
 
 describe("render.sidebar_lines", function()
