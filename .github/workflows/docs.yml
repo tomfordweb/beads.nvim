@@ -73,6 +73,11 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
+      # Workflow-deployed Pages drops the custom domain on redeploy unless the
+      # artifact carries a CNAME. Keep this in sync with the Pages domain.
+      - name: Pin custom domain
+        run: echo 'beads.tomfordweb.com' > site/CNAME
+
       - name: Upload Pages artifact
         if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
