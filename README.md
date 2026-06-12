@@ -163,6 +163,9 @@ require("beads").setup({ keymaps = true })
 require("telescope").load_extension("beads")
 ```
 
+After installing, run `:checkhealth beads` to verify `bd` and the dependencies
+are wired up.
+
 ## Configuration
 
 All keys optional; shown with defaults. Tables deep-merge, so override only
@@ -294,12 +297,24 @@ require("telescope").setup({
 
 ### Highlight groups
 
-All groups are `default`-linked — override with `vim.api.nvim_set_hl` or your
-colorscheme: `BeadsTitle` (→Title), `BeadsMeta` (→Comment), `BeadsSection`
-(→Function), `BeadsLink` (→Underlined), `BeadsHelp` (→NonText), `BeadsHelpKey`
-(→Special), `BeadsStatusOpen` (→DiagnosticInfo), `BeadsStatusInProgress`
-(→DiagnosticWarn), `BeadsStatusBlocked` (→DiagnosticError), `BeadsStatusClosed`
-(→Comment), `BeadsStatusDeferred` (→NonText).
+All groups are `default`-linked, so your colorscheme wins automatically; to
+override one explicitly use
+`vim.api.nvim_set_hl(0, "BeadsSection", { link = "Keyword" })` (or any attrs).
+
+| Group | Default link | Used for |
+|-------|--------------|----------|
+| `BeadsTitle` | `Title` | issue titles |
+| `BeadsId` | `Identifier` | issue ids |
+| `BeadsSection` | `Function` | sidebar section headers |
+| `BeadsMeta` | `Comment` | dates, labels, muted rows |
+| `BeadsLink` | `Underlined` | jumpable dependency ids |
+| `BeadsHelp` | `NonText` | help-bar text |
+| `BeadsHelpKey` | `Special` | help-bar keys |
+| `BeadsStatusOpen` | `DiagnosticInfo` | status: open |
+| `BeadsStatusInProgress` | `DiagnosticWarn` | status: in_progress |
+| `BeadsStatusBlocked` | `DiagnosticError` | status: blocked |
+| `BeadsStatusClosed` | `Comment` | status: closed |
+| `BeadsStatusDeferred` | `NonText` | status: deferred |
 
 ### Events
 
@@ -332,8 +347,6 @@ each resize/focus event (`:messages`) when diagnosing layout glitches.
 
 Filter cycles and select prompts use `bd statuses` / `bd types` (fetched once
 per session), so custom types configured in bd appear automatically.
-
-Run `:checkhealth beads` to verify the install.
 
 ### Keymaps
 
