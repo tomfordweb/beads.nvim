@@ -189,16 +189,18 @@ local sidebar_callbacks = {
   quit = close_win,
 }
 
--- Fetch dependents and (re)render the sidebar for the shown issue.
+-- Fetch dependents (+ a recent-history summary when that section is enabled)
+-- and (re)render the sidebar for the shown issue.
 update_sidebar = function(issue, focus)
   if not state.sidebar_visible then
     return
   end
-  cli.run_json({ "dep", "list", issue.id, "--direction=up" }, function(ok, dependents)
+  local sidebar_cfg = config.get().sidebar
+
+  local function show(links)
     if not is_open() or not state.issue or state.issue.id ~= issue.id then
       return
     end
-    local links = issues.partition_links(issue, ok and dependents or {})
     local _, sb = layout()
     if sb then
       sidebar.open(issue, links, sb, sidebar_callbacks)
@@ -206,6 +208,25 @@ update_sidebar = function(issue, focus)
         sidebar.focus()
       end
     end
+  end
+
+  cli.run_json({ "dep", "list", issue.id, "--direction=up" }, function(ok, dependents)
+    if not is_open() or not state.issue or state.issue.id ~= issue.id then
+      return
+    end
+    local links = issues.partition_links(issue, ok and dependents or {})
+    -- Surface the last-N change rows inline (M3); skip the extra bd call when
+    -- the section is disabled.
+    if not vim.tbl_contains(sidebar_cfg.sections or {}, "history") then
+      show(links)
+      return
+    end
+    cli.run_json({ "history", issue.id }, function(hok, entries)
+      if hok and type(entries) == "table" then
+        links.history = require("beads.history").recent(entries, sidebar_cfg.history_limit or 3)
+      end
+      show(links)
+    end)
   end)
 end
 

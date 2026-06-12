@@ -210,6 +210,22 @@ describe("render.sidebar_lines", function()
     )
   end)
 
+  it("renders an inline history summary from links.history (M3)", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    links.history = {
+      { date = "2026-06-11 12:00", committer = "dev", summary = "status: open → closed" },
+    }
+    local lines = render.sidebar_lines(issue, links, { sections = { "history" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Recent history$"))
+    assert.is_truthy(find_line(lines, "status: open → closed"))
+  end)
+
+  it("omits the history section when no rows are provided", function()
+    local lines = build({ "history" })
+    assert.is_nil(find_line(lines, "^Recent history$"))
+  end)
+
   it("respects custom section selection and order", function()
     local lines = build({ "blocks", "parent" })
     assert.is_nil(find_line(lines, "^Overview$"))

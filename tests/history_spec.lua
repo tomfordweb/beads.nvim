@@ -58,6 +58,34 @@ describe("history.changes", function()
   end)
 end)
 
+describe("history.recent", function()
+  it("returns the newest-first last N change rows (M3)", function()
+    local entries = {
+      entry("2026-06-11T13:00:00-04:00", "dev", { status = "closed", priority = 2, title = "t" }),
+      entry(
+        "2026-06-11T12:00:00-04:00",
+        "dev",
+        { status = "in_progress", priority = 2, title = "t" }
+      ),
+      entry("2026-06-11T11:00:00-04:00", "dev", { status = "open", priority = 2, title = "t" }),
+      entry("2026-06-11T10:00:00-04:00", "dev", { status = "open", priority = 3, title = "t" }),
+    }
+    local recent = history.recent(entries, 2)
+    assert.equals(2, #recent)
+    -- newest first: the close transition, then the in_progress transition
+    assert.is_truthy(recent[1].summary:match("status: in_progress → closed"))
+    assert.is_truthy(recent[2].summary:match("status: open → in_progress"))
+  end)
+
+  it("returns all rows when N exceeds the count", function()
+    local entries = {
+      entry("2026-06-11T11:00:00-04:00", "dev", { status = "open", priority = 2 }),
+      entry("2026-06-11T10:00:00-04:00", "dev", { status = "open", priority = 2 }),
+    }
+    assert.equals(1, #history.recent(entries, 10)) -- only the creation row
+  end)
+end)
+
 describe("history.lines", function()
   it("renders a header and two lines per row", function()
     local rows = {

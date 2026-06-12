@@ -90,6 +90,20 @@ function M.changes(entries)
   return rows
 end
 
+--- The most recent `n` change rows, newest-first, for the sidebar summary
+--- (M3) — surfaces history inline instead of only in the modal. Pure.
+---@param entries table[] raw bd history --json entries
+---@param n integer
+---@return { date: string, committer: string, summary: string }[]
+function M.recent(entries, n)
+  local rows = M.changes(entries)
+  local out = {}
+  for i = #rows, math.max(1, #rows - n + 1), -1 do
+    table.insert(out, rows[i])
+  end
+  return out
+end
+
 --- Render change rows into display lines + highlights (date dimmed). Pure.
 ---@param id string
 ---@param rows { date: string, committer: string, summary: string }[]

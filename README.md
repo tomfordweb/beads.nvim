@@ -152,8 +152,10 @@ require("beads").setup({
     enabled = true,         -- false: hidden until summoned with gs / <Tab>
     width = 34,
     position = "right",     -- "left"
-    -- section order; remove entries to hide them
-    sections = { "overview", "parent", "children", "depends_on", "blocks" },
+    -- section order; remove entries to hide them. "history" surfaces the last
+    -- `history_limit` change rows inline (the full log is still on `H`).
+    sections = { "overview", "parent", "children", "depends_on", "blocks", "history" },
+    history_limit = 3,
   },
 
   helpbar = true,           -- false: no keybind footers / prompt-title help

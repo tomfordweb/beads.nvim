@@ -294,6 +294,22 @@ function M.sidebar_lines(issue, links, opts)
       if issue.comment_count > 0 then
         add_line(lines, hls, (" comments: %d"):format(issue.comment_count), "BeadsMeta")
       end
+    elseif section == "history" then
+      -- last-N change rows surfaced inline (M3); full log stays behind `H`
+      local rows = links.history or {}
+      if #rows > 0 then
+        blank_separator()
+        add_line(lines, hls, "Recent history", "BeadsSection")
+        for _, row in ipairs(rows) do
+          add_line(
+            lines,
+            hls,
+            truncate((" %s  %s"):format(row.date, row.committer), width),
+            "BeadsMeta"
+          )
+          add_line(lines, hls, truncate("  " .. row.summary, width))
+        end
+      end
     elseif SIDEBAR_TITLES[section] then
       local entries = section == "parent" and (links.parent and { links.parent } or {})
         or links[section]

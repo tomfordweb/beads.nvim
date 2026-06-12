@@ -23,7 +23,7 @@
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
 ---@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[] }
----@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[] }
+---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[], history_limit: integer }
 ---@field helpbar boolean
 ---@field notify boolean
 ---@field refresh_on_focus boolean
@@ -134,8 +134,10 @@ local defaults = {
     enabled = true, -- open automatically with the detail view
     width = 34,
     position = "right", -- "left"
-    -- section order; remove entries to hide them
-    sections = { "overview", "parent", "children", "depends_on", "blocks" },
+    -- section order; remove entries to hide them. "history" surfaces the last
+    -- `history_limit` change rows inline (full log still on `H`).
+    sections = { "overview", "parent", "children", "depends_on", "blocks", "history" },
+    history_limit = 3,
   },
   helpbar = true,
   notify = true,
