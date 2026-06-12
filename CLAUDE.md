@@ -50,6 +50,30 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
+## Git & Push Policy
+
+> This section is authoritative and **overrides** the "Session Completion → PUSH
+> TO REMOTE" step in the beads-generated block above. Where they conflict, this
+> wins.
+
+**AI agents must never push or merge to `main`.** Only the repository owner
+pushes/merges `main`.
+
+Agent workflow for every change:
+
+1. Work on a feature branch — `git switch -c <branch>` (never commit straight to `main`).
+2. Commit there.
+3. Push the **branch**: `git push -u origin <branch>`.
+4. Open a PR: `gh pr create` (fill title/body; reference the bd issue).
+5. Stop. The owner reviews and merges. Do **not** merge your own PR.
+
+**Redefining "done":** a session is complete when your branch is pushed and a PR
+is open with CI green — **not** when `main` is pushed. Never run `git push`
+against `main`, never `git push origin HEAD:main`, never merge a PR.
+
+**Enforcement:** a local pre-push hook (`.beads/hooks/pre-push`, active via
+`core.hooksPath=.beads/hooks`) blocks any push to `refs/heads/main`. The owner
+overrides with `BEADS_OWNER_PUSH=1 git push`.
 
 ## Build & Test
 
