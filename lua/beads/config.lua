@@ -6,9 +6,18 @@
 
 ---@alias BeadsLhs string|string[]|false a key, a list of equivalent keys, or false to disable
 
+--- A user-defined custom action bound under a non-builtin mapping name:
+--- a key (or keys) plus fn(issue) called with the current/selected issue.
+---@class BeadsCustomAction
+---@field key BeadsLhs
+---@field fn fun(issue: table)
+---@field desc string|nil
+
+--- Builtin action names map to a BeadsLhs; a non-builtin name may instead hold
+--- a BeadsCustomAction. Builtins win on name collision (view + picker).
 ---@class BeadsMappings
----@field picker table<string, BeadsLhs>
----@field view table<string, BeadsLhs>
+---@field picker table<string, BeadsLhs|BeadsCustomAction>
+---@field view table<string, BeadsLhs|BeadsCustomAction>
 ---@field memories table<string, BeadsLhs>
 ---@field graph table<string, BeadsLhs>
 
@@ -30,6 +39,7 @@
 ---@field refresh_on_focus boolean
 ---@field debug boolean
 ---@field palette { extra: table[] }
+---@field hooks { on_open: fun(issue: table)|nil }
 ---@field runner fun(argv: string[], opts: table, on_exit: fun(out: table))|nil
 
 local M = {}
@@ -159,6 +169,10 @@ local defaults = {
   refresh_on_focus = true,
   debug = false, -- log float resize/focus events via vim.notify(DEBUG)
   palette = { extra = {} },
+  -- Lifecycle hooks. on_open(issue) fires once when the detail view first
+  -- opens an id (not on internal refreshes); user errors are caught and
+  -- surfaced via vim.notify(WARN) so a bad hook never breaks the view.
+  hooks = { on_open = nil },
   runner = nil,
 }
 

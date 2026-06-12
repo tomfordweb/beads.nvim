@@ -119,4 +119,13 @@ function M.resolve(value)
   return nil, nil
 end
 
+--- True when `value` is an in-pane custom-action spec: a table carrying both a
+--- `key` (lhs) and a callable `fn`. Plain lhs values (string/list/false) and
+--- the builtin `{ desc, fn }` menu shape (no `key`) are not custom specs.
+---@param value any
+---@return boolean
+function M.is_custom_spec(value)
+  return type(value) == "table" and value.key ~= nil and type(value.fn) == "function"
+end
+
 return M

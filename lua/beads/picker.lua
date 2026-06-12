@@ -10,6 +10,19 @@ local ui = require("beads.ui")
 
 local M = {}
 
+-- Builtin picker action names (the ones bound explicitly below). Custom
+-- user actions are any mappings.picker entry whose name is NOT in this set.
+local builtin_picker_actions = {
+  open = true,
+  status = true,
+  priority = true,
+  type = true,
+  label = true,
+  defer = true,
+  closed = true,
+  refetch = true,
+}
+
 -- Bind a configurable mapping (string | list | false) inside attach_mappings.
 local function map_action(map, lhs_value, fn)
   for _, lhs in ipairs(config.lhs(lhs_value)) do
@@ -376,6 +389,29 @@ function M._open_picker(all_issues, filters, source, picker_opts)
             end
           )
         end)
+
+        -- User-defined custom picker actions: any non-builtin name whose value
+        -- is a { key, fn, desc } spec. fn receives the selected issue. Builtin
+        -- names win on collision.
+        local beads_actions = require("beads.actions")
+        for action, value in pairs(m) do
+          if not builtin_picker_actions[action] and beads_actions.is_custom_spec(value) then
+            local fn = beads_actions.resolve(value)
+            map_action(map, value.key, function()
+              local entry = action_state.get_selected_entry()
+              if not entry then
+                return
+              end
+              local ok, err = pcall(fn, entry.value)
+              if not ok then
+                vim.notify(
+                  "beads: custom action '" .. action .. "' error: " .. tostring(err),
+                  vim.log.levels.WARN
+                )
+              end
+            end)
+          end
+        end
 
         return true
       end,

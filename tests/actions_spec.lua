@@ -34,6 +34,29 @@ describe("beads.actions", function()
     assert.equals(marker, fn)
     assert.equals("mine", desc)
   end)
+
+  it("resolves { key, fn, desc } in-pane custom-action tables", function()
+    local marker = function() end
+    local fn, desc = actions.resolve({ key = "t", fn = marker, desc = "tmux" })
+    assert.equals(marker, fn)
+    assert.equals("tmux", desc)
+  end)
+end)
+
+describe("beads.actions custom-action classification", function()
+  it("recognizes a { key, fn } spec as a custom in-pane action", function()
+    assert.is_true(actions.is_custom_spec({ key = "t", fn = function() end }))
+    assert.is_true(actions.is_custom_spec({ key = { "t", "T" }, fn = function() end, desc = "x" }))
+  end)
+
+  it("rejects plain lhs values and malformed tables", function()
+    assert.is_false(actions.is_custom_spec("t"))
+    assert.is_false(actions.is_custom_spec({ "gd", "<CR>" }))
+    assert.is_false(actions.is_custom_spec(false))
+    assert.is_false(actions.is_custom_spec(nil))
+    assert.is_false(actions.is_custom_spec({ key = "t" })) -- no fn
+    assert.is_false(actions.is_custom_spec({ fn = function() end })) -- no key
+  end)
 end)
 
 describe("keymaps config normalization", function()

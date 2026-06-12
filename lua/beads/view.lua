@@ -520,6 +520,7 @@ local handlers = {
 }
 
 local function setup_keymaps(buf)
+  local actions = require("beads.actions")
   local mappings = config.get().mappings.view or {}
   for action, handler in pairs(handlers) do
     for _, lhs in ipairs(config.lhs(mappings[action])) do
@@ -529,6 +530,29 @@ local function setup_keymaps(buf)
         handler.fn,
         { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc }
       )
+    end
+  end
+  -- User-defined custom actions: any non-builtin name whose value is a
+  -- { key, fn, desc } spec. Builtins win on name collision.
+  for action, value in pairs(mappings) do
+    if not handlers[action] and actions.is_custom_spec(value) then
+      local fn, desc = actions.resolve(value)
+      for _, lhs in ipairs(config.lhs(value.key)) do
+        vim.keymap.set("n", lhs, function()
+          local ok, err = pcall(fn, state.issue)
+          if not ok then
+            vim.notify(
+              "beads: custom action '" .. action .. "' error: " .. tostring(err),
+              vim.log.levels.WARN
+            )
+          end
+        end, {
+          buffer = buf,
+          silent = true,
+          nowait = true,
+          desc = "Beads: " .. (desc or action),
+        })
+      end
     end
   end
 end
@@ -586,6 +610,16 @@ function M.open(id, opts)
           state.on_close = opts.on_close
         end
         set_content(issue, cok and comments or nil, children)
+        -- Lifecycle hook: fire once on the initial open of an id (M.refresh
+        -- re-renders never reach here). pcall so a user error can't break the
+        -- view; surface it as a warning instead.
+        local on_open = config.get().hooks and config.get().hooks.on_open
+        if on_open then
+          local hook_ok, err = pcall(on_open, issue)
+          if not hook_ok then
+            vim.notify("beads: hooks.on_open error: " .. tostring(err), vim.log.levels.WARN)
+          end
+        end
       end)
     end)
   end)

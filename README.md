@@ -174,6 +174,12 @@ require("beads").setup({
   refresh_on_focus = true,  -- re-center floats on tmux reattach/zoom (focus events)
   debug = false,            -- log float resize/focus events via vim.notify(DEBUG)
   palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
+
+  -- lifecycle hooks (errors are caught and surfaced via vim.notify)
+  hooks = {
+    on_open = nil,          -- function(issue) — fires once when the detail view
+                            -- first opens an id (not on internal refreshes)
+  },
 })
 ```
 
@@ -338,6 +344,51 @@ beads|ready|search|memories`.
 | `<C-n>` | new memory (prompts for key) |
 | `<C-d>` | forget memory (confirms) |
 | `<C-r>` | refetch |
+
+### Custom in-pane actions
+
+Any `mappings.view` or `mappings.picker` entry whose name is **not** a builtin
+action may be a `{ key, fn, desc }` table. The key (a string or list, same as
+any lhs) binds inside that pane, and `fn` is called with the current issue —
+`state.issue` in the detail view, the selected entry in the picker. Builtins win
+on name collision, and errors are caught and surfaced via `vim.notify`.
+
+```lua
+require("beads").setup({
+  mappings = {
+    view = {
+      -- press `t` in the detail view to spin up a tmux window for the issue,
+      -- mark it in_progress, and drop into a shell there
+      tmux = {
+        key = "t",
+        desc = "tmux window",
+        fn = function(issue)
+          vim.system({
+            "tmux", "new-window", "-n", issue.id,
+            "bd update " .. issue.id .. " -s in_progress; $SHELL",
+          })
+        end,
+      },
+    },
+  },
+})
+```
+
+### Lifecycle hooks
+
+`hooks.on_open(issue)` fires once when the detail view first opens an id — not
+on internal refreshes — so you can sync external state (a tmux window title, a
+status line, etc.) to whatever issue you're viewing:
+
+```lua
+require("beads").setup({
+  hooks = {
+    on_open = function(issue)
+      vim.g.beads_current = issue.id
+    end,
+  },
+})
+```
 
 ## Tests
 
