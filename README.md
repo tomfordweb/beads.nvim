@@ -14,25 +14,28 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
   issue preview. No subprocess per keystroke: one fetch, client-side
   filtering. `<C-f>` defers/undefers the selected issue.
 - **Ready view** — `bd ready` (open issues with no active blockers).
-- **Detail view** — floating window with full fields and dependencies.
-  Change status/priority, assign (`A`), labels (`L`), defer/undefer (`f`),
-  close/reopen, and jump through dependency ids (`gd` / `<CR>`) with `<BS>`
-  history.
-- **Labels** — `L` in the detail view adds or removes labels (pick an
-  existing one or type a new); `<C-l>` filters the browser by label.
-- **Epic children** — epics render a `Children` section in the detail body
-  (completion count, every child id jumpable); `:BeadsPalette` → `epic
-  status` shows completion per epic.
-- **Change history** — `H` in the detail view shows the issue's tracked-field
-  transitions (status/priority/assignee/title/type/description) in a float.
-- **Links sidebar** — companion pane beside the detail view: overview
-  (status/priority/assignee/labels/dates) plus parent, children, depends-on
-  and blocks sections, every id jumpable. `<Tab>` switches panes, `gs`
+- **Editable detail view** — the detail float IS the issue's description as a
+  real, always-editable buffer: every vim (and user) keybind works — `a`
+  appends, `o` opens a line, `q` records macros. `:w` persists via
+  `bd update --body-file -`, `:q`/`:wq`/`ZZ` save and close. Optional autosave
+  and persistent undo (see `edit` config). Set
+  `view = { editable_description = false }` for the legacy read-only detail
+  view with single-key actions and the `e` edit submode.
+- **Issue sidebar** — companion pane beside the detail view: overview
+  (status/priority/assignee/labels/dates), an **Actions** section (change
+  status/priority, comment, labels, assign, defer/undefer, close/reopen,
+  graph, history — run a row with `<CR>`, or press its single key — `s`, `p`,
+  `a`, `L`, `A`, `f`, `c`/`o`, `D`, `H` — while the sidebar is focused), plus
+  parent, children, depends-on, blocks, comments, and recent history, every
+  id jumpable (`gd` / `<CR>`, `<BS>` history). `<Tab>` switches panes, `gs`
   toggles it.
-- **Description editing** — `e` edits the description in place inside the
-  detail float (no nested modal); `:w` persists via `bd update --body-file -`,
-  `:wq` saves and returns to the detail view. Optional autosave and persistent
-  undo (see `edit` config).
+- **Labels** — the `labels` action adds or removes labels (pick an existing
+  one or type a new); `<C-l>` filters the browser by label.
+- **Epic children** — epics list their children in the sidebar (every child
+  id jumpable); `:BeadsPalette` → `epic status` shows completion per epic.
+- **Change history** — the `history` action shows the issue's tracked-field
+  transitions (status/priority/assignee/title/type/description) in a float;
+  the last few changes render inline in the sidebar.
 - **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
   `:BeadsQuick` quick capture wrapping `bd q`.
 - **Command palette** — `:BeadsPalette` runs repo-level commands
@@ -45,8 +48,8 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
   terminal size changes (tmux pane resize or zoom).
 - **Link styling** — jumpable dependency ids render underlined
   (`BeadsLink`, default-linked to `Underlined`).
-- **Comments** — issue comments render in the detail view; `a` adds one
-  (`bd comment --stdin`).
+- **Comments** — issue comments render in the sidebar; the `comment` action
+  (`a` while the sidebar is focused) adds one (`bd comment --stdin`).
 - **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
   shows `bd graph <id> --compact` in a float; ids are links, `gd` opens
   them. `a` toggles between the single-issue graph and the all-issues
@@ -112,7 +115,10 @@ require("beads").setup({
 
   -- in-pane mappings, keyed action -> key. A value may be a string, a list
   -- of equivalent keys, or false to disable. Partial overrides merge; an
-  -- overridden value replaces the default wholesale.
+  -- overridden value replaces the default wholesale. The `view` action keys
+  -- (status/priority/comment/…) run from the SIDEBAR when it is focused (the
+  -- editable description buffer keeps every key's native vim meaning); with
+  -- view.editable_description=false they bind on the detail buffer itself.
   mappings = {
     picker   = { open = "<CR>", status = "<C-s>", priority = "<C-y>", type = "<C-t>", label = "<C-l>",
                  defer = "<C-f>", closed = "<C-a>", refetch = "<C-r>" },
@@ -147,7 +153,12 @@ require("beads").setup({
     graph = { width = 0.8 },             -- height content-sized
   },
 
-  -- inline description editing (the `e` key in the detail view)
+  -- detail-view shape: true (default) = the detail float is the description
+  -- as a real editable buffer; false = legacy read-only view + `e` submode
+  view = { editable_description = true },
+
+  -- description-editor behavior (applies to the editable detail buffer and,
+  -- in legacy mode, the `e` inline-edit submode)
   edit = {
     inline = true,              -- false: use the separate edit float instead
     discard_on_quit = false,    -- :q saves before returning; true discards
@@ -161,14 +172,16 @@ require("beads").setup({
                                 -- when no clipboard provider exists (see :checkhealth)
   },
 
-  -- linked-issues sidebar next to the detail view
+  -- issue sidebar next to the detail view (overview, actions, links, comments)
   sidebar = {
     enabled = true,         -- false: hidden until summoned with gs / <Tab>
     width = 34,
     position = "right",     -- "left"
-    -- section order; remove entries to hide them. "history" surfaces the last
-    -- `history_limit` change rows inline (the full log is still on `H`).
-    sections = { "overview", "parent", "children", "depends_on", "blocks", "history" },
+    -- section order; remove entries to hide them. "actions" holds the
+    -- runnable action rows; "comments" the thread; "history" surfaces the
+    -- last `history_limit` change rows inline (full log on the history action).
+    sections = { "overview", "actions", "parent", "children", "depends_on",
+                 "blocks", "comments", "history" },
     history_limit = 3,
   },
 

@@ -32,6 +32,7 @@
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
 ---@field graph { scope: "issue"|"all" }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
+---@field view { editable_description: boolean }
 ---@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[], osc52: boolean }
 ---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[], history_limit: integer }
 ---@field helpbar boolean
@@ -132,9 +133,17 @@ local defaults = {
     palette = { width = 0.7 }, -- content-sized height
     graph = { width = 0.8 }, -- content-sized height
   },
-  -- Inline description editing (the `e` key in the detail view). When
-  -- inline=true the description is edited in-place inside the detail float;
-  -- inline=false falls back to the separate edit float (beads.edit).
+  -- Detail-view shape. editable_description=true (default) makes the main
+  -- detail float a real, always-editable description buffer (the full nvim
+  -- editing experience — no action keys on it; actions live in the sidebar).
+  -- false restores the legacy read-only detail view with the `e` edit submode.
+  view = { editable_description = true },
+  -- Inline description editing (the `e` key in the legacy read-only detail
+  -- view, i.e. view.editable_description=false). When inline=true the
+  -- description is edited in-place inside the detail float; inline=false
+  -- falls back to the separate edit float (beads.edit). The autosave /
+  -- undo / quit-behavior options below apply to the editable-description
+  -- buffer as well.
   edit = {
     inline = true,
     discard_on_quit = false, -- :q saves before returning to the detail view
@@ -155,9 +164,21 @@ local defaults = {
     enabled = true, -- open automatically with the detail view
     width = 34,
     position = "right", -- "left"
-    -- section order; remove entries to hide them. "history" surfaces the last
-    -- `history_limit` change rows inline (full log still on `H`).
-    sections = { "overview", "parent", "children", "depends_on", "blocks", "history" },
+    -- section order; remove entries to hide them. "actions" renders the
+    -- issue-action rows (status/priority/comment/…, run with <CR> or their
+    -- single keys while the sidebar is focused); "comments" shows the thread;
+    -- "history" surfaces the last `history_limit` change rows inline (full
+    -- log still on the history action).
+    sections = {
+      "overview",
+      "actions",
+      "parent",
+      "children",
+      "depends_on",
+      "blocks",
+      "comments",
+      "history",
+    },
     history_limit = 3,
   },
   helpbar = true,

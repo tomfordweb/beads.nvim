@@ -220,10 +220,12 @@ local function truncate(s, width)
 end
 
 --- One linked issue as two sidebar lines: " <icon> <id>" with the id
---- link-styled, then the truncated title indented beneath.
-local function add_link_entry(lines, hls, entry, width)
+--- link-styled, then the truncated title indented beneath. Both lines are
+--- tagged in `rows` so cursor dispatch works anywhere on the entry.
+local function add_link_entry(lines, hls, entry, width, rows)
   local text = (" %s %s"):format(issues.status_icon(entry.status), entry.id)
   add_line(lines, hls, text, entry.status == "closed" and "Comment" or nil)
+  rows[#lines] = { kind = "link", id = entry.id }
   local id_start = text:find(entry.id, 1, true)
   if id_start then
     -- layered after the line highlight, same as detail_lines dep ids
@@ -236,7 +238,28 @@ local function add_link_entry(lines, hls, entry, width)
   end
   if entry.title and entry.title ~= "" then
     add_line(lines, hls, "   " .. truncate(entry.title, width - 4), "BeadsMeta")
+    rows[#lines] = { kind = "link", id = entry.id }
   end
+end
+
+--- Issue-action rows for the sidebar Actions section, reflecting the issue's
+--- current state (close vs reopen, defer vs undefer, current status/priority).
+---@param issue table normalized issue
+---@return { name: string, label: string }[]
+local function action_rows(issue)
+  local assignee = issue.assignee and issue.assignee ~= "" and issue.assignee or nil
+  return {
+    { name = "status", label = "status: " .. issue.status },
+    { name = "priority", label = "priority: " .. issues.priority_label(issue.priority) },
+    { name = "comment", label = "add comment" },
+    { name = "labels", label = "labels" },
+    { name = "assign", label = assignee and ("assign: " .. assignee) or "assign" },
+    { name = "defer", label = issue.status == "deferred" and "undefer" or "defer" },
+    issue.status == "closed" and { name = "reopen", label = "reopen" }
+      or { name = "close", label = "close" },
+    { name = "graph", label = "graph" },
+    { name = "history", label = "history" },
+  }
 end
 
 local SIDEBAR_TITLES = {
@@ -246,16 +269,19 @@ local SIDEBAR_TITLES = {
   blocks = "Blocks",
 }
 
---- Render the linked-issues sidebar. Sections come from opts.sections (order
---- preserved, empty ones omitted). Ids are standalone WORDs so <cWORD>
---- dep-jump works. Pure.
+--- Render the issue sidebar (overview / actions / links / comments /
+--- history). Sections come from opts.sections (order preserved, empty ones
+--- omitted). Ids are standalone WORDs so <cWORD> dep-jump works. The third
+--- return maps 1-indexed line numbers to dispatch targets:
+--- { kind = "action", name = <handler name> } | { kind = "link", id = <id> }.
+--- Pure.
 ---@param issue table normalized issue
----@param links { parent: table|nil, children: table[], depends_on: table[], blocks: table[] }
----@param opts { sections: string[], width: integer }
----@return string[] lines, table[] highlights
+---@param links { parent: table|nil, children: table[], depends_on: table[], blocks: table[], comments: table[]|nil, history: table[]|nil }
+---@param opts { sections: string[], width: integer, action_keys: table<string, string>|nil }
+---@return string[] lines, table[] highlights, table<integer, table> rows
 function M.sidebar_lines(issue, links, opts)
   local width = opts.width or 34
-  local lines, hls = {}, {}
+  local lines, hls, rows = {}, {}, {}
 
   local function blank_separator()
     if #lines > 0 then
@@ -294,6 +320,48 @@ function M.sidebar_lines(issue, links, opts)
       if issue.comment_count > 0 then
         add_line(lines, hls, (" comments: %d"):format(issue.comment_count), "BeadsMeta")
       end
+    elseif section == "actions" then
+      blank_separator()
+      add_line(lines, hls, "Actions", "BeadsSection")
+      for _, row in ipairs(action_rows(issue)) do
+        local key = opts.action_keys and opts.action_keys[row.name]
+        local text
+        if key then
+          text = (" %s  %s"):format(key, row.label)
+        else
+          text = ("    %s"):format(row.label)
+        end
+        add_line(lines, hls, truncate(text, width))
+        rows[#lines] = { kind = "action", name = row.name }
+        if key then
+          table.insert(hls, {
+            lnum = #lines - 1,
+            col_start = 1,
+            col_end = 1 + #key,
+            hl_group = "BeadsHelpKey",
+          })
+        end
+      end
+    elseif section == "comments" then
+      local cs = links.comments or {}
+      if #cs > 0 then
+        blank_separator()
+        add_line(lines, hls, ("Comments (%d)"):format(#cs), "BeadsSection")
+        for _, comment in ipairs(cs) do
+          add_line(
+            lines,
+            hls,
+            truncate(
+              (" %s — %s"):format(comment.author or "?", short_date(comment.created_at)),
+              width
+            ),
+            "BeadsMeta"
+          )
+          for _, l in ipairs(vim.split(comment.text or "", "\n", { plain = true })) do
+            add_line(lines, hls, truncate("  " .. l, width))
+          end
+        end
+      end
     elseif section == "history" then
       -- last-N change rows surfaced inline (M3); full log stays behind `H`
       local rows = links.history or {}
@@ -322,7 +390,7 @@ function M.sidebar_lines(issue, links, opts)
         end
         add_line(lines, hls, header, "BeadsSection")
         for _, entry in ipairs(entries) do
-          add_link_entry(lines, hls, entry, width)
+          add_link_entry(lines, hls, entry, width, rows)
         end
       end
     end
@@ -331,7 +399,7 @@ function M.sidebar_lines(issue, links, opts)
   if #lines == 0 then
     add_line(lines, hls, "(no links)", "BeadsMeta")
   end
-  return lines, hls
+  return lines, hls, rows
 end
 
 -- Status rows for the home dashboard, in display order.

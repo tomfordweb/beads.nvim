@@ -1,5 +1,13 @@
 -- Floating detail view for a single issue: render, mutate (status/priority/
 -- close/reopen), navigate dependencies in place with history.
+--
+-- Two shapes (config.view.editable_description):
+--  * true (default): the main float IS the issue description as a real,
+--    always-editable buffer (full nvim editing; :w saves, :q closes). All
+--    issue actions live in the sidebar — as selectable rows and as single-key
+--    shortcuts while the sidebar is focused.
+--  * false (legacy): a read-only rendered detail buffer with single-key
+--    action mappings and the `e` inline-edit submode.
 
 local cli = require("beads.cli")
 local config = require("beads.config")
@@ -16,15 +24,30 @@ local M = {}
 -- on_close (when set by the caller, e.g. the picker) runs after the float
 -- closes so the user lands back where they came from. sidebar_visible
 -- persists across dep jumps within one view session.
-local state =
-  { win = nil, buf = nil, issue = nil, history = {}, on_close = nil, sidebar_visible = nil }
+local state = {
+  win = nil,
+  buf = nil,
+  issue = nil,
+  comments = nil,
+  children = nil,
+  history = {},
+  on_close = nil,
+  sidebar_visible = nil,
+}
+
+-- True when the main float is the always-editable description buffer.
+local function editable()
+  return config.get().view.editable_description
+end
 
 local function reset_state()
-  inline_edit.abort() -- the float is gone; drop any edit submode bookkeeping
+  inline_edit.abort() -- the float is gone; flush + drop editor bookkeeping
   local cb = state.on_close
   state.win = nil
   state.buf = nil
   state.issue = nil
+  state.comments = nil
+  state.children = nil
   state.history = {}
   state.on_close = nil
   state.sidebar_visible = nil
@@ -93,25 +116,70 @@ local function win_geometry()
 end
 
 local update_sidebar -- defined below; needs the jump/back helpers
+local close_win_saved -- defined below; save-then-close for the editable buffer
+
+-- Helpbar pane + float title for the main window.
+local function main_pane()
+  return editable() and "view_editable" or "view"
+end
+
+local function main_title(issue)
+  if not editable() then
+    return " " .. issue.id .. " "
+  end
+  local title = issue.title or ""
+  if vim.fn.strchars(title) > 48 then
+    title = vim.fn.strcharpart(title, 0, 47) .. "…"
+  end
+  return (" %s — %s "):format(issue.id, title)
+end
+
+-- Close path for the editable description buffer (:q/:wq/ZZ and the sidebar's
+-- quit): make sure the body is persisted before the float (and with it the
+-- buffer) goes away. Already-saved/discarded paths fall straight through.
+close_win_saved = function()
+  if editable() and inline_edit.is_active() then
+    inline_edit.save(function()
+      close_win()
+    end)
+  else
+    close_win()
+  end
+end
 
 local function set_content(issue, comments, children)
   state.issue = issue
-  local lines, hls = render.detail_lines(issue, comments, children)
+  state.comments = comments
+  state.children = children
 
   -- filetype before content so treesitter/syntax parses from the first render;
   -- set only when it changes since set_content re-runs on every refresh (M6).
   if vim.bo[state.buf].filetype ~= "markdown" then
     vim.bo[state.buf].filetype = "markdown"
   end
-  vim.bo[state.buf].modifiable = true
-  vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
-  vim.bo[state.buf].modifiable = false
-  float.apply_highlights(state.buf, "beads_view", hls)
+
+  if editable() then
+    -- the main buffer is the live description editor: attach once, then
+    -- re-target on navigation; never clobber unsaved same-issue edits
+    if not inline_edit.is_active() then
+      inline_edit.attach(state.buf, issue, { on_quit = close_win_saved })
+    elseif inline_edit.current_id() ~= issue.id or not vim.bo[state.buf].modified then
+      inline_edit.set_issue(issue)
+    end
+    -- (same issue + unsaved edits: leave the buffer alone; the sidebar
+    -- below still picks up the refreshed metadata)
+  else
+    local lines, hls = render.detail_lines(issue, comments, children)
+    vim.bo[state.buf].modifiable = true
+    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
+    vim.bo[state.buf].modifiable = false
+    float.apply_highlights(state.buf, "beads_view", hls)
+  end
 
   if is_open() then
     vim.api.nvim_win_set_config(
       state.win,
-      float.decorate(win_geometry(), { title = " " .. issue.id .. " ", pane = "view" })
+      float.decorate(win_geometry(), { title = main_title(issue), pane = main_pane() })
     )
   end
   update_sidebar(issue)
@@ -178,15 +246,25 @@ local function history_back()
   end
 end
 
+local handlers -- defined below; the sidebar action callback dispatches into it
+
 local sidebar_callbacks = {
   jump = jump_to,
+  action = function(name)
+    local h = handlers and handlers[name]
+    if h then
+      h.fn()
+    end
+  end,
   focus_view = function()
     if is_open() then
       vim.api.nvim_set_current_win(state.win)
     end
   end,
   back = history_back,
-  quit = close_win,
+  quit = function()
+    close_win_saved()
+  end,
 }
 
 -- Fetch dependents (+ a recent-history summary when that section is enabled)
@@ -215,6 +293,12 @@ update_sidebar = function(issue, focus)
       return
     end
     local links = issues.partition_links(issue, ok and dependents or {})
+    -- comments render in the sidebar; epics get their richer `bd children`
+    -- rows (fetched for the body in legacy mode) over dependency-derived ones
+    links.comments = state.comments
+    if state.children and #state.children > 0 then
+      links.children = state.children
+    end
     -- Surface the last-N change rows inline (M3); skip the extra bd call when
     -- the section is disabled.
     if not vim.tbl_contains(sidebar_cfg.sections or {}, "history") then
@@ -234,7 +318,7 @@ local function reapply_main_geometry()
   if is_open() and state.issue then
     vim.api.nvim_win_set_config(
       state.win,
-      float.decorate(win_geometry(), { title = " " .. state.issue.id .. " ", pane = "view" })
+      float.decorate(win_geometry(), { title = main_title(state.issue), pane = main_pane() })
     )
   end
 end
@@ -275,8 +359,10 @@ local function enter_inline_edit()
   })
 end
 
--- Handlers for the configurable view mappings (config.mappings.view).
-local handlers = {
+-- Handlers for the configurable view mappings (config.mappings.view); in
+-- editable-description mode these run from the sidebar instead (action rows
+-- + focused single-key shortcuts), dispatched via sidebar_callbacks.action.
+handlers = {
   quit = { desc = "close", fn = close_win },
   edit = {
     desc = "edit description",
@@ -522,6 +608,28 @@ local handlers = {
 local function setup_keymaps(buf)
   local actions = require("beads.actions")
   local mappings = config.get().mappings.view or {}
+  if editable() then
+    -- the description buffer is a real editor: every key keeps its native
+    -- vim meaning (q records macros, a/c/o/s edit text, …). Only navigation
+    -- to the sidebar/history is mapped; actions live on the sidebar buffer,
+    -- and quitting goes through :q/:wq/ZZ (intercepted by inline_edit).
+    local nav = {
+      sidebar = handlers.sidebar,
+      sidebar_toggle = handlers.sidebar_toggle,
+      back = handlers.back,
+    }
+    for action, handler in pairs(nav) do
+      for _, lhs in ipairs(config.lhs(mappings[action])) do
+        vim.keymap.set(
+          "n",
+          lhs,
+          handler.fn,
+          { buffer = buf, silent = true, nowait = true, desc = "Beads: " .. handler.desc }
+        )
+      end
+    end
+    return
+  end
   for action, handler in pairs(handlers) do
     for _, lhs in ipairs(config.lhs(mappings[action])) do
       vim.keymap.set(
@@ -564,16 +672,26 @@ local function ensure_float(id)
   if state.sidebar_visible == nil then
     state.sidebar_visible = config.get().sidebar.enabled
   end
-  state.buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[state.buf].buftype = "nofile"
-  vim.bo[state.buf].bufhidden = "wipe"
+  if editable() then
+    -- the editable description buffer; inline_edit.attach (in set_content)
+    -- wires saving, autosave, undo, and the :w/:q intercepts onto it
+    state.buf = vim.api.nvim_create_buf(false, false)
+    pcall(vim.api.nvim_buf_set_name, state.buf, ("beads://%s/description"):format(id))
+    vim.bo[state.buf].buftype = "acwrite"
+    vim.bo[state.buf].bufhidden = "wipe"
+    vim.bo[state.buf].swapfile = false
+  else
+    state.buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[state.buf].buftype = "nofile"
+    vim.bo[state.buf].bufhidden = "wipe"
+  end
 
   state.win = vim.api.nvim_open_win(
     state.buf,
     true,
     float.decorate(win_geometry(), {
       title = " " .. id .. " ",
-      pane = "view",
+      pane = main_pane(),
       style = "minimal",
     })
   )
@@ -625,10 +743,15 @@ function M.open(id, opts)
   end)
 end
 
---- Refetch and re-render the currently shown issue (no-op when closed or while
---- the inline editor owns the window).
+--- Refetch and re-render the currently shown issue. No-op when closed, or —
+--- legacy mode only — while the inline-edit submode owns the window. In
+--- editable mode set_content refreshes the sidebar always and reloads the
+--- description buffer only when it has no unsaved edits.
 function M.refresh()
-  if not is_open() or not state.issue or inline_edit.is_active() then
+  if not is_open() or not state.issue then
+    return
+  end
+  if not editable() and inline_edit.is_active() then
     return
   end
   local id = state.issue.id
@@ -647,6 +770,9 @@ function M.refresh()
   end)
 end
 
-M.close = close_win
+-- Public close: persists unsaved description edits first in editable mode.
+M.close = function()
+  close_win_saved()
+end
 
 return M

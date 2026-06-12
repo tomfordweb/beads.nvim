@@ -57,13 +57,20 @@ describe("beads.config", function()
       assert.is_true(sb.enabled)
       assert.equals(34, sb.width)
       assert.equals("right", sb.position)
-      assert.are.same(
-        { "overview", "parent", "children", "depends_on", "blocks", "history" },
-        sb.sections
-      )
+      assert.are.same({
+        "overview",
+        "actions",
+        "parent",
+        "children",
+        "depends_on",
+        "blocks",
+        "comments",
+        "history",
+      }, sb.sections)
       assert.equals("<Tab>", config.get().mappings.view.sidebar)
       assert.equals("gs", config.get().mappings.view.sidebar_toggle)
       assert.equals("<Tab>", config.get().mappings.sidebar.focus_view)
+      assert.is_true(config.get().view.editable_description)
     end)
 
     it("sidebar partial override keeps siblings", function()

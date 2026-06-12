@@ -57,9 +57,19 @@ M.PANES = {
     { action = "refresh", label = "refresh" },
     { action = "quit", label = "quit" },
   },
+  -- editable-description main float: the buffer is a real editor, so only
+  -- the editor verbs and the few navigation maps are advertised
+  view_editable = {
+    group = "view",
+    { key = ":w", label = "save" },
+    { key = ":q", label = "close" },
+    { action = "sidebar", label = "actions" },
+    { action = "sidebar_toggle", label = "panel" },
+    { action = "back", label = "back" },
+  },
   sidebar = {
     group = "sidebar",
-    { action = "jump", label = "open" },
+    { action = "jump", label = "run/open" },
     { action = "focus_view", label = "view" },
     { action = "back", label = "history" },
     { action = "quit", label = "quit" },

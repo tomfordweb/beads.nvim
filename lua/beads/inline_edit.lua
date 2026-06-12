@@ -1,16 +1,24 @@
 -- Inline description editing inside the detail view's own float (M4/M5/M7/M9).
 --
--- Instead of opening a second, overlapping modal (the old beads.edit float),
--- the description is edited in an `acwrite` buffer swapped INTO the detail
--- window. The detail buffer is hidden (not wiped) for the duration and
--- restored on exit, so there is never a nested window. Because the edit buffer
--- is a separate buffer, the detail view's normal-mode handlers simply do not
--- exist on it — the "gate every view handler while editing" requirement (M4)
--- is satisfied structurally rather than with a flag.
+-- Two modes share one save core (`bd update --body-file -`, debounced
+-- autosave, persistent undo, :w/:q intercepts):
 --
--- Lifecycle: enter(ctx) -> [edit, :w autosaves/saves] -> exit() restores the
--- detail view. The view passes callbacks via ctx so this module never depends
--- on beads.view (no require cycle).
+--  * attach mode (view.editable_description=true, the default): the detail
+--    view's main buffer IS the description editor for the whole life of the
+--    float. M.attach(buf, issue, opts) wires the save machinery onto the
+--    view-owned buffer; M.set_issue(issue) re-targets it when the view
+--    navigates to another issue (dep-jump/back) or refreshes. Quit verbs
+--    (:q/:wq/ZZ/…) call opts.on_quit so the view closes the float.
+--
+--  * swap mode (legacy, view.editable_description=false): enter(ctx) swaps an
+--    `acwrite` buffer INTO the detail window over the read-only view, and
+--    exit() restores it. Because the edit buffer is a separate buffer, the
+--    detail view's normal-mode handlers simply do not exist on it — the "gate
+--    every view handler while editing" requirement (M4) is satisfied
+--    structurally rather than with a flag.
+--
+-- The view passes callbacks via ctx/opts so this module never depends on
+-- beads.view (no require cycle).
 
 local cli = require("beads.cli")
 local config = require("beads.config")
@@ -18,15 +26,22 @@ local util = require("beads.util")
 
 local M = {}
 
--- Single active submode (the view owns one float at a time).
--- active = { win, view_buf, edit_buf, issue, ctx, timer, undofile,
---            saving, dirty_again, after_save }
+-- Single active editor (the view owns one float at a time).
+-- active = { mode = "swap"|"attach", win, view_buf, edit_buf, issue, ctx,
+--            timer, undofile, saving, dirty_again, after_save, on_quit }
 local active = nil
 
---- True while an inline edit submode is open.
+--- True while an inline edit submode is open (swap mode) or an editor is
+--- attached (attach mode).
 ---@return boolean
 function M.is_active()
   return active ~= nil
+end
+
+--- Id of the issue the active editor targets, or nil.
+---@return string|nil
+function M.current_id()
+  return active and active.issue and active.issue.id or nil
 end
 
 local function undo_path(id)
@@ -97,7 +112,10 @@ local function do_save(cb)
   end
 
   active.saving = true
-  local id = active.issue.id
+  -- capture the issue NOW: attach mode can re-target the buffer to another
+  -- issue (set_issue) while this write is in flight
+  local target = active.issue
+  local id = target.id
   local body = body_of(buf)
   cli.run_stdin({ "update", id, "--body-file", "-" }, body, function(ok)
     if not active or active.edit_buf ~= buf then
@@ -108,10 +126,11 @@ local function do_save(cb)
     end
     active.saving = false
     if ok then
-      if vim.api.nvim_buf_is_valid(buf) then
+      -- only clear the flag when the buffer still shows the saved issue
+      if active.issue == target and vim.api.nvim_buf_is_valid(buf) then
         vim.bo[buf].modified = false
       end
-      active.issue.description = body
+      target.description = body
       save_undo(buf)
       util.emit("BeadsIssueUpdated", { id = id, action = "update" })
     end
@@ -181,6 +200,112 @@ local function apply_guard_keys(buf)
   end
 end
 
+-- Replace the buffer's content without recording the swap in its undo tree
+-- (undolevels=-1 trick). Used on issue switch so `u` can never resurrect a
+-- DIFFERENT issue's description and then autosave it into this one.
+local function set_lines_no_undo(buf, lines)
+  local saved = vim.bo[buf].undolevels
+  vim.bo[buf].undolevels = -1
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].undolevels = saved
+end
+
+local function restore_undo(buf, undofile)
+  if config.get().edit.persistent_undo then
+    vim.api.nvim_buf_call(buf, function()
+      pcall(vim.cmd, "silent! rundo " .. vim.fn.fnameescape(undofile))
+    end)
+  end
+end
+
+--- Point the attached editor at `issue`: flush any unsaved text of the
+--- previous issue, swap the buffer content/name/undo over, and mark the
+--- buffer clean. Also used for same-issue refreshes (content reload).
+---@param issue table normalized issue
+function M.set_issue(issue)
+  if not active then
+    return
+  end
+  local buf = active.edit_buf
+  if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+    return
+  end
+  local switching = active.issue and active.issue.id ~= issue.id
+  if switching then
+    if vim.bo[buf].modified then
+      if active.saving then
+        -- a save is already in flight: the coalescing queue would only
+        -- capture the body AFTER the swap below replaced it — ship this
+        -- issue's body directly instead so the edit can't be lost
+        local old_id = active.issue.id
+        cli.run_stdin({ "update", old_id, "--body-file", "-" }, body_of(buf), function(ok)
+          if ok then
+            util.emit("BeadsIssueUpdated", { id = old_id, action = "update" })
+          end
+        end)
+      else
+        do_save() -- body captured synchronously; write completes in flight
+      end
+    end
+    persist_undo(buf, active.undofile)
+    active.undofile = undo_path(issue.id)
+    pcall(vim.api.nvim_buf_set_name, buf, ("beads://%s/description"):format(issue.id))
+    set_lines_no_undo(buf, description_lines(issue))
+    restore_undo(buf, active.undofile)
+  else
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, description_lines(issue))
+  end
+  active.issue = issue
+  vim.bo[buf].modified = false
+end
+
+--- Attach the description editor to a buffer the view owns (attach mode).
+--- The buffer becomes the issue's description for the float's whole life;
+--- quit verbs (:q/:wq/ZZ/…) call opts.on_quit instead of restoring a view
+--- buffer. Content/undo are loaded for `issue` immediately.
+---@param buf integer
+---@param issue table normalized issue
+---@param opts { on_quit: fun()|nil }|nil
+function M.attach(buf, issue, opts)
+  if active then
+    return
+  end
+  if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+    return
+  end
+  active = {
+    mode = "attach",
+    edit_buf = buf,
+    issue = issue,
+    undofile = undo_path(issue.id),
+    on_quit = opts and opts.on_quit,
+  }
+
+  vim.api.nvim_create_autocmd("BufWriteCmd", {
+    buffer = buf,
+    callback = function()
+      do_save()
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    buffer = buf,
+    callback = schedule_autosave,
+  })
+  setup_quit_maps(buf)
+  apply_guard_keys(buf)
+
+  set_lines_no_undo(buf, description_lines(issue))
+  restore_undo(buf, active.undofile)
+  vim.bo[buf].modified = false
+end
+
+--- Save now (attach mode helper for the view's close path). cb(ok) once the
+--- buffer is in sync; a clean buffer succeeds immediately.
+---@param cb fun(ok: boolean)|nil
+function M.save(cb)
+  do_save(cb)
+end
+
 --- Enter the inline edit submode for ctx.issue inside ctx.win.
 ---@param ctx { win: integer, view_buf: integer, issue: table, reconfigure: fun(opts: table), on_exit: fun() }
 function M.enter(ctx)
@@ -215,6 +340,7 @@ function M.enter(ctx)
   vim.bo[buf].modified = false
 
   active = {
+    mode = "swap",
     win = ctx.win,
     view_buf = ctx.view_buf,
     edit_buf = buf,
@@ -303,44 +429,76 @@ function M.exit()
 end
 
 --- Tear down without touching windows (the float was closed out from under
---- us, e.g. the view's WinClosed reset). No restore, no on_exit.
+--- us, e.g. the view's WinClosed reset). No restore, no on_exit. Attach mode
+--- flushes unsaved text first — the float closing must not lose typed work.
 function M.abort()
+  if not active then
+    return
+  end
+  if
+    active.mode == "attach"
+    and active.edit_buf
+    and vim.api.nvim_buf_is_valid(active.edit_buf)
+    and vim.bo[active.edit_buf].modified
+  then
+    do_save() -- body captured synchronously; the write completes in flight
+  end
   local a = teardown()
-  -- enter() set view_buf to bufhidden=hide so it survives the buffer swap; the
-  -- window is now gone, so nothing will ever wipe it. Delete it explicitly to
-  -- avoid leaking one hidden scratch buffer per aborted edit (mirrors exit(),
-  -- which restores view_buf to the window instead of deleting it).
+  -- swap mode: enter() set view_buf to bufhidden=hide so it survives the
+  -- buffer swap; the window is now gone, so nothing will ever wipe it. Delete
+  -- it explicitly to avoid leaking one hidden scratch buffer per aborted edit
+  -- (mirrors exit(), which restores view_buf to the window instead).
   if a and a.view_buf and vim.api.nvim_buf_is_valid(a.view_buf) then
     pcall(vim.api.nvim_buf_delete, a.view_buf, { force = true })
   end
 end
 
--- :w — save and stay in the submode.
+-- Leave the editor: swap mode restores the read-only detail view; attach mode
+-- hands control back to the view (which closes the float).
+local function leave()
+  if active and active.mode == "attach" then
+    local on_quit = active.on_quit
+    -- keep `active` set: the view's close path (WinClosed -> abort) does the
+    -- actual teardown, and a cleared modified flag means abort won't re-save.
+    if active.edit_buf and vim.api.nvim_buf_is_valid(active.edit_buf) then
+      pcall(function()
+        vim.bo[active.edit_buf].modified = false
+      end)
+    end
+    if on_quit then
+      on_quit()
+    end
+  else
+    M.exit()
+  end
+end
+
+-- :w — save and stay in the editor.
 function M.cmd_write()
   do_save()
 end
 
--- :wq / :x — save then return to the detail view.
+-- :wq / :x — save then leave.
 function M.cmd_save_exit()
   do_save(function()
-    M.exit()
+    leave()
   end)
 end
 
--- :q — return to the detail view; saves first unless edit.discard_on_quit.
+-- :q — leave; saves first unless edit.discard_on_quit.
 function M.cmd_quit()
   if config.get().edit.discard_on_quit then
-    M.exit()
+    leave()
   else
     do_save(function()
-      M.exit()
+      leave()
     end)
   end
 end
 
--- :q! / ZQ — return without saving.
+-- :q! / ZQ — leave without saving.
 function M.cmd_discard_exit()
-  M.exit()
+  leave()
 end
 
 return M

@@ -177,4 +177,151 @@ describe("beads.inline_edit", function()
     assert.is_true(#update_calls() >= 1)
     assert.equals("typed", update_calls()[1].stdin)
   end)
+
+  describe("attach mode (editable-description buffer)", function()
+    local function make_attached(issue, opts)
+      local buf = vim.api.nvim_create_buf(false, false)
+      vim.bo[buf].buftype = "acwrite"
+      pcall(vim.api.nvim_buf_set_name, buf, ("beads://%s/description"):format(issue.id))
+      vim.bo[buf].bufhidden = "wipe"
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        row = 1,
+        col = 1,
+        width = 40,
+        height = 10,
+      })
+      table.insert(open, { win = win, buf = buf })
+      inline.attach(buf, issue, opts)
+      return buf, win
+    end
+
+    it("loads the description into the attached buffer, unmodified", function()
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "one\ntwo" })
+      assert.is_true(inline.is_active())
+      assert.equals("beads_nvim-a1", inline.current_id())
+      assert.are.same({ "one", "two" }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+      assert.is_false(vim.bo[buf].modified)
+    end)
+
+    it("persists through bd update on :w and stays attached", function()
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "old" })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "new body" })
+      vim.bo[buf].modified = true
+      inline.cmd_write()
+      vim.wait(200, function()
+        return #update_calls() > 0 and not vim.bo[buf].modified
+      end)
+      assert.equals(1, #update_calls())
+      assert.equals("new body", update_calls()[1].stdin)
+      assert.equals("beads_nvim-a1", update_calls()[1].argv[3])
+      assert.is_true(inline.is_active())
+      assert.is_false(vim.bo[buf].modified)
+    end)
+
+    it(":wq saves then calls on_quit instead of restoring a view buffer", function()
+      local quit = false
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "old" }, {
+        on_quit = function()
+          quit = true
+        end,
+      })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "done" })
+      vim.bo[buf].modified = true
+      inline.cmd_save_exit()
+      vim.wait(200, function()
+        return quit
+      end)
+      assert.is_true(quit)
+      assert.equals(1, #update_calls())
+      assert.is_true(inline.is_active(), "teardown is the view's close path, not :wq")
+    end)
+
+    it("set_issue flushes unsaved text of the previous issue, then re-targets", function()
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "old a1" })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "edited a1" })
+      vim.bo[buf].modified = true
+      inline.set_issue({ id = "beads_nvim-b2", title = "U", description = "body b2" })
+      vim.wait(200, function()
+        return #update_calls() > 0
+      end)
+      -- the old issue's edit was saved...
+      assert.equals(1, #update_calls())
+      assert.equals("edited a1", update_calls()[1].stdin)
+      assert.equals("beads_nvim-a1", update_calls()[1].argv[3])
+      -- ...and the buffer now shows the new issue, clean
+      assert.equals("beads_nvim-b2", inline.current_id())
+      assert.are.same({ "body b2" }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+      assert.is_false(vim.bo[buf].modified)
+    end)
+
+    it("set_issue flushes even when another save is already in flight", function()
+      -- slow runner: holds the first update so the second switch happens
+      -- while saving=true (the coalescing-queue blind spot)
+      local pending = {}
+      config.setup({
+        runner = function(argv, opts, on_exit)
+          table.insert(captured, { argv = argv, stdin = opts.stdin })
+          if argv[2] == "update" and #pending == 0 then
+            table.insert(pending, on_exit) -- hold the first save open
+            return
+          end
+          on_exit({ code = 0, stdout = "", stderr = "" })
+        end,
+      })
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "a1" })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "edited a1" })
+      vim.bo[buf].modified = true
+      inline.set_issue({ id = "beads_nvim-b2", title = "U", description = "b2" }) -- save in flight
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "edited b2" })
+      vim.bo[buf].modified = true
+      inline.set_issue({ id = "beads_nvim-c3", title = "V", description = "c3" }) -- saving=true path
+      pending[1]({ code = 0, stdout = "", stderr = "" }) -- release the first save
+      vim.wait(300, function()
+        return #update_calls() >= 2
+      end)
+      local bodies = {}
+      for _, c in ipairs(update_calls()) do
+        bodies[c.argv[3]] = c.stdin
+      end
+      assert.equals("edited a1", bodies["beads_nvim-a1"])
+      assert.equals("edited b2", bodies["beads_nvim-b2"], "in-flight switch must not lose the edit")
+    end)
+
+    it("set_issue with the same id reloads content (external refresh)", function()
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "v1" })
+      inline.set_issue({ id = "beads_nvim-a1", title = "T", description = "v2" })
+      assert.are.same({ "v2" }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+      assert.equals(0, #update_calls())
+    end)
+
+    it("abort flushes a modified attached buffer (float closed under us)", function()
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "old" })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "typed then closed" })
+      vim.bo[buf].modified = true
+      inline.abort()
+      vim.wait(200, function()
+        return #update_calls() > 0
+      end)
+      assert.equals(1, #update_calls())
+      assert.equals("typed then closed", update_calls()[1].stdin)
+      assert.is_false(inline.is_active())
+    end)
+
+    it("discard exit clears modified so nothing is saved on abort", function()
+      local quit = false
+      local buf = make_attached({ id = "beads_nvim-a1", title = "T", description = "old" }, {
+        on_quit = function()
+          quit = true
+        end,
+      })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "throwaway" })
+      vim.bo[buf].modified = true
+      inline.cmd_discard_exit()
+      assert.is_true(quit)
+      inline.abort()
+      vim.wait(100)
+      assert.equals(0, #update_calls())
+    end)
+  end)
 end)

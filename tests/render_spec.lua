@@ -263,6 +263,72 @@ describe("render.sidebar_lines", function()
     )
   end)
 
+  it("renders action rows with key hints and tags them in the rows map", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    local lines, _, rows = render.sidebar_lines(issue, links, {
+      sections = { "actions" },
+      width = 34,
+      action_keys = { status = "s", priority = "p", close = "c" },
+    })
+    local header = find_line(lines, "^Actions$")
+    assert.is_truthy(header)
+    local status_lnum, status_line = find_line(lines, "status: ")
+    assert.is_truthy(status_lnum)
+    assert.is_truthy(status_line:find(" s  status: ", 1, true))
+    assert.are.same({ kind = "action", name = "status" }, rows[status_lnum])
+    -- open issue offers close, not reopen
+    local close_lnum = find_line(lines, "close$")
+    assert.are.same({ kind = "action", name = "close" }, rows[close_lnum])
+    assert.is_nil(find_line(lines, "reopen"))
+  end)
+
+  it("offers reopen instead of close for closed issues", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    issue.status = "closed"
+    local lines, _, rows = render.sidebar_lines(
+      issue,
+      issues.partition_links(issue, {}),
+      { sections = { "actions" }, width = 34 }
+    )
+    local lnum = find_line(lines, "reopen")
+    assert.is_truthy(lnum)
+    assert.are.same({ kind = "action", name = "reopen" }, rows[lnum])
+  end)
+
+  it("renders the comments section from links.comments", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    links.comments = {
+      { author = "tom", created_at = "2026-06-11T10:00:00Z", text = "first note" },
+      { author = "dev", created_at = "2026-06-12T10:00:00Z", text = "second" },
+    }
+    local lines = render.sidebar_lines(issue, links, { sections = { "comments" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Comments %(2%)$"))
+    assert.is_truthy(find_line(lines, "tom"))
+    assert.is_truthy(find_line(lines, "first note"))
+  end)
+
+  it("omits the comments section when empty", function()
+    local lines = build({ "comments" })
+    assert.is_nil(find_line(lines, "^Comments"))
+  end)
+
+  it("tags link entry lines (id + title) in the rows map", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, fixtures.dependents)
+    local lines, _, rows =
+      render.sidebar_lines(issue, links, { sections = { "children" }, width = 34 })
+    local tagged = 0
+    for lnum in pairs(rows) do
+      assert.equals("link", rows[lnum].kind)
+      assert.is_truthy(rows[lnum].id)
+      assert.is_truthy(lines[lnum])
+      tagged = tagged + 1
+    end
+    assert.is_true(tagged >= 1)
+  end)
+
   it("renders an inline history summary from links.history (M3)", function()
     local issue = issues.normalize(fixtures.show_child_issue)
     local links = issues.partition_links(issue, {})
