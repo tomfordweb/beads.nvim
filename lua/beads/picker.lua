@@ -3,6 +3,7 @@
 
 local cli = require("beads.cli")
 local config = require("beads.config")
+local float = require("beads.float")
 local helpbar = require("beads.helpbar")
 local issues = require("beads.issues")
 local render = require("beads.render")
@@ -78,14 +79,17 @@ local function issue_previewer()
         if not vim.api.nvim_buf_is_valid(self.state.bufnr) then
           return
         end
-        local lines
+        local lines, hls
         if issue == false then
           lines = { "Failed to load " .. id }
         else
-          lines = render.detail_lines(issue)
+          lines, hls = render.detail_lines(issue)
         end
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
         vim.bo[self.state.bufnr].filetype = "markdown"
+        -- color the preview to match the detail view; clear-before-apply keeps
+        -- it bounded as Telescope reuses this preview buffer across entries.
+        float.apply_highlights(self.state.bufnr, "beads_picker_preview", hls or {})
       end
 
       local cached = preview_cache[id]
