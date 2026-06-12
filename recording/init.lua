@@ -12,6 +12,8 @@
 vim.opt.rtp:prepend("/work")
 vim.opt.rtp:prepend("/deps/plenary.nvim")
 vim.opt.rtp:prepend("/deps/telescope.nvim")
+vim.opt.rtp:prepend("/deps/dressing.nvim")
+vim.opt.rtp:prepend("/deps/nvim-notify")
 vim.cmd("runtime! plugin/plenary.vim")
 
 -- Minimal, legible chrome so the floats fill the frame.
@@ -25,6 +27,33 @@ vim.opt.cmdheight = 1
 vim.opt.fillchars = { eob = " " }
 vim.opt.guicursor = "n-v-c:block-blinkon0"
 pcall(vim.cmd.colorscheme, "habamax")
+
+-- Optional UI enhancers, recorded so the README GIFs show the recommended
+-- experience. Documented as optional in the README; never runtime deps.
+--   dressing.nvim  — bordered modal vim.ui.select / vim.ui.input
+--   nvim-notify    — toast notifications for vim.notify
+--   nvim-treesitter — markdown highlighting in the detail / edit buffers
+pcall(function()
+  require("dressing").setup({
+    input = { border = "rounded" },
+    select = { backend = { "telescope", "builtin" }, builtin = { border = "rounded" } },
+  })
+end)
+pcall(function()
+  local notify = require("notify")
+  notify.setup({
+    background_colour = "#000000",
+    stages = "fade_in_slide_out",
+    timeout = 2500,
+    render = "default",
+  })
+  vim.notify = notify
+end)
+pcall(function()
+  require("nvim-treesitter.configs").setup({
+    highlight = { enable = true },
+  })
+end)
 
 require("beads").setup({
   keymaps = true,
