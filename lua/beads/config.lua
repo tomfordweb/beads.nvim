@@ -192,6 +192,7 @@ local default_keymaps = {
     m = "memories",
     s = "search",
     g = "graph",
+    h = "dashboard",
   },
 }
 

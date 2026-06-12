@@ -35,6 +35,10 @@ cmd("BeadsMemories", function()
   require("beads.memories").open()
 end, { desc = "Beads: browse memories" })
 
+cmd("BeadsDashboard", function()
+  require("beads.dashboard").open()
+end, { desc = "Beads: home dashboard" })
+
 cmd("BeadsSearch", function(o)
   require("beads.picker").search({ default_text = o.args ~= "" and o.args or nil })
 end, { nargs = "?", desc = "Beads: live search (bd search)" })

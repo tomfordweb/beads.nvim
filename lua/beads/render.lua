@@ -334,6 +334,50 @@ function M.sidebar_lines(issue, links, opts)
   return lines, hls
 end
 
+-- Status rows for the home dashboard, in display order.
+local DASHBOARD_ROWS = {
+  { key = "open_issues", status = "open", label = "open" },
+  { key = "in_progress_issues", status = "in_progress", label = "in progress" },
+  { key = "blocked_issues", status = "blocked", label = "blocked" },
+  { key = "deferred_issues", status = "deferred", label = "deferred" },
+  { key = "closed_issues", status = "closed", label = "closed" },
+}
+
+--- Home-dashboard lines from a `bd stats --json` summary table: one colored
+--- row per status with its count, then ready/total. Missing fields render 0.
+--- Pure.
+---@param summary table the `summary` object from bd stats --json
+---@return string[] lines, table[] highlights
+function M.dashboard_lines(summary)
+  summary = summary or {}
+  local lines, hls = {}, {}
+  add_line(lines, hls, "beads.nvim", "BeadsTitle")
+  add_line(lines, hls, "")
+  for _, row in ipairs(DASHBOARD_ROWS) do
+    local n = tonumber(summary[row.key]) or 0
+    add_line(
+      lines,
+      hls,
+      (" %s %-13s %4d"):format(issues.status_icon(row.status), row.label, n),
+      M.status_hl(row.status)
+    )
+  end
+  add_line(lines, hls, "")
+  add_line(
+    lines,
+    hls,
+    (" %-15s %4d"):format("ready", tonumber(summary.ready_issues) or 0),
+    "BeadsSection"
+  )
+  add_line(
+    lines,
+    hls,
+    (" %-15s %4d"):format("total", tonumber(summary.total_issues) or 0),
+    "BeadsMeta"
+  )
+  return lines, hls
+end
+
 --- Link-style highlight tuple for the first issue id on each line.
 --- Intended for surfaces with one id per line (bd graph output); issue
 --- titles may contain hyphenated words, so later matches are skipped to

@@ -96,6 +96,12 @@ M.actions = {
       require("beads.graphview").open(nil, "all")
     end,
   },
+  dashboard = {
+    desc = "home dashboard",
+    fn = function()
+      require("beads.dashboard").open()
+    end,
+  },
 }
 
 --- Resolve a menus value (action name, function, or { desc, fn } table)

@@ -93,6 +93,11 @@ M.PANES = {
   palette_output = {
     { key = "q", label = "close" },
   },
+  dashboard = {
+    { key = "o/i/b/d", label = "status" },
+    { key = "r", label = "ready" },
+    { key = "q", label = "close" },
+  },
 }
 
 --- Resolve a pane to ordered { key, label } pairs using effective config.

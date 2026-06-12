@@ -58,6 +58,9 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
   closed issues.
 - **Memories** — `:BeadsMemories` browses the bd memory store; `<CR>` edits
   in a float (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
+- **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
+  project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
+  to jump into that status filter, `r` for ready, `q` to close.
 
 ## Requirements
 

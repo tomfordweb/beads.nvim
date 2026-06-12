@@ -175,6 +175,50 @@ describe("render.detail_lines", function()
   end)
 end)
 
+describe("render.dashboard_lines", function()
+  local function find_line(lines, pat)
+    for _, l in ipairs(lines) do
+      if l:match(pat) then
+        return l
+      end
+    end
+    return nil
+  end
+
+  it("renders a status count row per status plus ready/total (F1)", function()
+    local summary = {
+      open_issues = 11,
+      in_progress_issues = 5,
+      blocked_issues = 3,
+      deferred_issues = 1,
+      closed_issues = 84,
+      ready_issues = 8,
+      total_issues = 101,
+    }
+    local lines, hls = render.dashboard_lines(summary)
+    assert.equals("beads.nvim", lines[1])
+    assert.is_truthy(find_line(lines, "open%s+11"))
+    assert.is_truthy(find_line(lines, "in progress%s+5"))
+    assert.is_truthy(find_line(lines, "blocked%s+3"))
+    assert.is_truthy(find_line(lines, "closed%s+84"))
+    assert.is_truthy(find_line(lines, "ready%s+8"))
+    assert.is_truthy(find_line(lines, "total%s+101"))
+    assert.is_true(#hls > 0)
+  end)
+
+  it("defaults missing counts to 0", function()
+    local lines = render.dashboard_lines({})
+    assert.is_truthy(find_line(lines, "open%s+0"))
+    assert.is_truthy(find_line(lines, "total%s+0"))
+  end)
+
+  it("tolerates a nil summary", function()
+    assert.has_no.errors(function()
+      render.dashboard_lines(nil)
+    end)
+  end)
+end)
+
 describe("render.sidebar_lines", function()
   local DEFAULT_SECTIONS = { "overview", "parent", "children", "depends_on", "blocks" }
 
