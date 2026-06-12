@@ -142,6 +142,9 @@ the all-issues view, and `gd` follows any id straight to its issue.
 - **Kanban board** — `:BeadsBoard` (or the `<leader>bd` menu `k`) groups every
   issue into status columns; `h`/`l` switch columns, `<CR>` opens detail, and
   `s` moves a card to another status.
+- **Wisps** — `:BeadsWisps` (or the `<leader>bd` menu `w`) lists bd's ephemeral
+  agent-runtime issues grouped by type; `p` promotes one to a permanent bead
+  (`bd promote`). Niche — most users never need it.
 
 ## Requirements
 
@@ -463,7 +466,7 @@ Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 `:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`, `:BeadsDashboard`,
-`:BeadsBoard`, `:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
+`:BeadsBoard`, `:BeadsWisps`, `:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
 beads|ready|search|memories`.
 
 ### Picker mappings

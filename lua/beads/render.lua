@@ -534,6 +534,68 @@ function M.board_column_lines(group, width)
   return lines, hls, rows
 end
 
+--- Render the wisps browser: ephemeral agent issues grouped by wisp type
+--- (in `types` order; empty types are omitted), one link-styled, gd-jumpable
+--- row each. Returns lines + highlight specs + a line->id dispatch map. Pure.
+---@param list table[] normalized wisps, each tagged with a `wisp_type`
+---@param types string[] wisp-type order
+---@param width integer inner width for truncation
+---@return string[] lines, table[] hls, table<integer, string> rows
+function M.wisp_lines(list, types, width)
+  local by_type = {}
+  for _, w in ipairs(list or {}) do
+    local t = w.wisp_type or "?"
+    by_type[t] = by_type[t] or {}
+    table.insert(by_type[t], w)
+  end
+  local lines, hls, rows = {}, {}, {}
+  for _, t in ipairs(types or {}) do
+    local items = by_type[t]
+    if items and #items > 0 then
+      if #lines > 0 then
+        add_line(lines, hls, "")
+      end
+      add_line(lines, hls, ("%s (%d)"):format(t, #items), "BeadsSection")
+      for _, w in ipairs(items) do
+        local text = (" %s %s  %s  %s"):format(
+          issues.status_icon(w.status),
+          w.id,
+          issues.priority_label(w.priority),
+          w.title or ""
+        )
+        add_line(lines, hls, truncate(text, width))
+        rows[#lines] = w.id
+        local id_start = text:find(w.id, 1, true)
+        if id_start then
+          table.insert(hls, {
+            lnum = #lines - 1,
+            col_start = id_start - 1,
+            col_end = id_start - 1 + #w.id,
+            hl_group = "BeadsLink",
+          })
+        end
+      end
+    end
+  end
+  if #lines == 0 then
+    add_line(lines, hls, "No wisps.", "BeadsSection")
+    add_line(lines, hls, "")
+    add_line(
+      lines,
+      hls,
+      "Wisps are ephemeral agent-runtime issues (heartbeats, patrols,",
+      "BeadsMeta"
+    )
+    add_line(
+      lines,
+      hls,
+      "health checks). Promote one with p to make it a permanent bead.",
+      "BeadsMeta"
+    )
+  end
+  return lines, hls, rows
+end
+
 --- Link-style highlight tuple for the first issue id on each line.
 --- Intended for surfaces with one id per line (bd graph output); issue
 --- titles may contain hyphenated words, so later matches are skipped to

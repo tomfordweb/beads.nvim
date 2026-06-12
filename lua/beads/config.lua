@@ -118,6 +118,11 @@ local defaults = {
       refresh = "R",
       quit = { "q", "<Esc>" },
     },
+    wisps = {
+      promote = "p",
+      refetch = { "R", "<C-r>" },
+      quit = { "q", "<Esc>" },
+    },
   },
   icons = {
     status = {
@@ -234,6 +239,7 @@ local default_keymaps = {
     g = "graph",
     h = "dashboard",
     k = "board",
+    w = "wisps",
   },
 }
 

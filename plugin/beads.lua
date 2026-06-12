@@ -43,6 +43,10 @@ cmd("BeadsBoard", function()
   require("beads.board").open()
 end, { desc = "Beads: kanban board" })
 
+cmd("BeadsWisps", function()
+  require("beads.wisps").open()
+end, { desc = "Beads: browse ephemeral wisps" })
+
 cmd("BeadsSearch", function(o)
   require("beads.picker").search({ default_text = o.args ~= "" and o.args or nil })
 end, { nargs = "?", desc = "Beads: live search (bd search)" })

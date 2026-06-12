@@ -108,6 +108,12 @@ M.actions = {
       require("beads.board").open()
     end,
   },
+  wisps = {
+    desc = "browse wisps",
+    fn = function()
+      require("beads.wisps").open()
+    end,
+  },
 }
 
 --- Resolve a menus value (action name, function, or { desc, fn } table)

@@ -96,6 +96,12 @@ M.PANES = {
     { action = "refresh", label = "refresh" },
     { action = "quit", label = "quit" },
   },
+  wisps = {
+    group = "wisps",
+    { action = "promote", label = "promote" },
+    { action = "refetch", label = "refetch" },
+    { action = "quit", label = "quit" },
+  },
   edit = {
     { key = ":w", label = "save" },
     { key = ":q", label = "close" },
