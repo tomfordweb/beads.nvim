@@ -23,3 +23,6 @@
 
 # Local MCP config: machine-specific absolute paths (never publish).
 /.mcp.json
+
+# Playwright MCP scratch output (screenshots, snapshots).
+/.playwright-mcp/

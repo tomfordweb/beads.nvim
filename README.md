@@ -263,7 +263,7 @@ pane-zoom, which often report `FocusGained`/`VimResume` rather than
 `VimResized`). For the focus events to reach Neovim, enable focus reporting in
 `~/.tmux.conf`:
 
-```tmux
+```sh
 set -g focus-events on
 set -g set-clipboard on   # also lets yanks reach the system clipboard (OSC52)
 ```
