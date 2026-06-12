@@ -12,21 +12,10 @@ sidebar, and the dependency graph](assets/demo.gif)
 
 1. Install [`bd`](https://github.com/gastownhall/beads) and confirm it is on
    your `$PATH` (`bd version` — tested against 1.0.4).
-2. Add the plugin with lazy.nvim:
-
-   ```lua
-   {
-     "tomfordweb/beads.nvim",
-     dependencies = {
-       "nvim-telescope/telescope.nvim",
-       "nvim-lua/plenary.nvim",
-     },
-     config = function()
-       require("beads").setup({ keymaps = true })
-       require("telescope").load_extension("beads")
-     end,
-   }
-   ```
+2. Install the plugin with your package manager — see
+   [Installation](#installation) for lazy.nvim, packer, vim-plug, and
+   mini.deps. It needs telescope + plenary, then `require("beads").setup()` and
+   the Telescope extension.
 3. Open Neovim in a repo with a `.beads` store (or run `:BeadsPalette` →
    `init`), then `:Beads` to browse — `<CR>` opens an issue, `<Tab>` toggles
    its sidebar, `gd` follows a dependency.
@@ -104,7 +93,75 @@ sidebar, and the dependency graph](assets/demo.gif)
   lets your markdown autoformatters run on `:w`. The plugin works fully without
   it (it ships its own `Beads*` highlights).
 
-The plugin spec is in the [Quickstart](#quickstart) above.
+## Installation
+
+Every snippet does the same three things: put the plugin on the runtimepath
+with its telescope + plenary dependencies, call `require("beads").setup()`, and
+load the Telescope extension. Pick your package manager.
+
+### lazy.nvim
+
+```lua
+{
+  "tomfordweb/beads.nvim",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
+  },
+  config = function()
+    require("beads").setup({ keymaps = true })
+    require("telescope").load_extension("beads")
+  end,
+}
+```
+
+### packer.nvim
+
+```lua
+use({
+  "tomfordweb/beads.nvim",
+  requires = {
+    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
+  },
+  config = function()
+    require("beads").setup({ keymaps = true })
+    require("telescope").load_extension("beads")
+  end,
+})
+```
+
+### vim-plug
+
+Declare the plugins in your `init.vim`/`init.lua`:
+
+```vim
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+Plug 'tomfordweb/beads.nvim'
+```
+
+Then, after `plug#end()`, run the setup in a `lua` block:
+
+```lua
+require("beads").setup({ keymaps = true })
+require("telescope").load_extension("beads")
+```
+
+### mini.deps
+
+```lua
+local add = MiniDeps.add
+add({
+  source = "tomfordweb/beads.nvim",
+  depends = {
+    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
+  },
+})
+require("beads").setup({ keymaps = true })
+require("telescope").load_extension("beads")
+```
 
 ## Configuration
 

@@ -59,13 +59,13 @@ describe("beads.config", function()
       assert.equals("right", sb.position)
       assert.are.same({
         "overview",
-        "actions",
         "parent",
         "children",
         "depends_on",
         "blocks",
         "comments",
         "history",
+        "actions",
       }, sb.sections)
       assert.equals("<Tab>", config.get().mappings.view.sidebar)
       assert.equals("gs", config.get().mappings.view.sidebar_toggle)
