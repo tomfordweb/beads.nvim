@@ -74,6 +74,7 @@ M.PANES = {
   graph = {
     group = "graph",
     { action = "jump", label = "open issue" },
+    { action = "scope", label = "all/issue" },
     { action = "quit", label = "close" },
   },
   edit = {

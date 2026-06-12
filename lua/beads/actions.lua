@@ -88,15 +88,12 @@ M.actions = {
       local issues = require("beads.issues")
       local id = issues.match_issue_id(vim.fn.expand("<cWORD>"))
       if id then
-        require("beads.graphview").open(id)
+        require("beads.graphview").open(id, "issue")
         return
       end
-      vim.ui.input({ prompt = "Graph issue id: " }, function(input)
-        local target = input and issues.match_issue_id(input)
-        if target then
-          require("beads.graphview").open(target)
-        end
-      end)
+      -- No id in context (e.g. the <leader>bdg menu): open the all-issues graph
+      -- straight away; toggle to a single issue from inside the float.
+      require("beads.graphview").open(nil, "all")
     end,
   },
 }

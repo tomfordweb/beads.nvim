@@ -21,6 +21,7 @@
 ---@field keymaps boolean|BeadsKeymaps
 ---@field mappings BeadsMappings
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
+---@field graph { scope: "issue"|"all" }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
 ---@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[], osc52: boolean }
 ---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[], history_limit: integer }
@@ -90,6 +91,7 @@ local defaults = {
     },
     graph = {
       jump = { "gd", "<CR>" },
+      scope = "a",
       quit = { "q", "<Esc>" },
     },
   },
@@ -104,6 +106,11 @@ local defaults = {
     deps_down = "↓",
     deps_up = "↑",
   },
+  -- Dependency-graph float scope (distinct from float.graph sizing below).
+  -- "issue" graphs a single id (`bd graph <id> --compact`); "all" graphs every
+  -- open issue (`bd graph --all --compact`). Toggle in-place with the `scope`
+  -- key. M.open's scope arg overrides this default per-open.
+  graph = { scope = "issue" },
   -- Float sizes. width/height accept a fraction (0–1 = % of the editor), a
   -- "<n>%" string, or an absolute cell count (>1). Heights left unset stay
   -- content-sized. Percentage defaults keep the floats a sensible, consistent

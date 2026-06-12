@@ -1,5 +1,7 @@
--- Dependency graph float: `bd graph <id> --compact` rendered read-only,
--- with ids link-styled and gd-jumpable into the detail view.
+-- Dependency graph float. Scope "issue" renders `bd graph <id> --compact`
+-- for one issue; scope "all" renders `bd graph --all --compact` for every
+-- open issue. The `scope` key flips between them and re-renders in place.
+-- Output is read-only with ids link-styled and gd-jumpable into the detail view.
 
 local cli = require("beads.cli")
 local config = require("beads.config")
@@ -9,11 +11,39 @@ local render = require("beads.render")
 
 local M = {}
 
---- Show the dependency graph for an issue id.
----@param id string
-function M.open(id)
+--- bd argv for a graph at the given scope. "all" ignores id and graphs every
+--- open issue; "issue" graphs the single id.
+---@param id string|nil
+---@param scope "issue"|"all"
+---@return string[]
+function M.argv(id, scope)
+  -- "all" (or a missing id, defensively) graphs everything; a nil id must
+  -- never reach the argv as a hole between "graph" and "--compact".
+  if scope == "all" or not id then
+    return { "graph", "--all", "--compact" }
+  end
+  return { "graph", id, "--compact" }
+end
+
+--- Float title for a graph at the given scope.
+---@param id string|nil
+---@param scope "issue"|"all"
+---@return string
+function M.title(id, scope)
+  if scope == "all" then
+    return " graph (all) "
+  end
+  return " graph " .. (id or "") .. " "
+end
+
+--- Show the dependency graph. With scope "all" no id is needed.
+---@param id string|nil
+---@param scope "issue"|"all"|nil defaults to config.graph.scope
+function M.open(id, scope)
+  scope = scope or config.get().graph.scope
   render.define_highlights()
-  cli.run_plain({ "graph", id, "--compact" }, function(ok, stdout)
+
+  cli.run_plain(M.argv(id, scope), function(ok, stdout)
     if not ok then
       return
     end
@@ -39,10 +69,7 @@ function M.open(id)
     local win = vim.api.nvim_open_win(
       buf,
       true,
-      float.decorate(
-        geometry(),
-        { title = " graph " .. id .. " ", pane = "graph", style = "minimal" }
-      )
+      float.decorate(geometry(), { title = M.title(id, scope), pane = "graph", style = "minimal" })
     )
     vim.wo[win].wrap = false
     float.auto_resize(win, geometry)
@@ -59,6 +86,17 @@ function M.open(id)
         require("beads.view").open(target)
       end
     end
+    -- Flip issue<->all and re-render in place (closing this float first).
+    -- Switching to single-issue scope needs an id; when there is none (the
+    -- all-graph opened from the menu) the toggle is a no-op.
+    local function toggle_scope()
+      local next_scope = scope == "all" and "issue" or "all"
+      if next_scope == "issue" and not id then
+        return
+      end
+      close()
+      M.open(id, next_scope)
+    end
 
     local m = config.get().mappings.graph
     local function bmap(lhs_value, rhs, desc)
@@ -73,6 +111,7 @@ function M.open(id)
     end
     bmap(m.quit, close, "close graph")
     bmap(m.jump, jump, "open issue under cursor")
+    bmap(m.scope, toggle_scope, "toggle graph scope (issue/all)")
   end)
 end
 

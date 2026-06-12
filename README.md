@@ -48,7 +48,11 @@ Tested against bd 1.0.4. This project tracks its own issues with beads.
 - **Comments** — issue comments render in the detail view; `a` adds one
   (`bd comment --stdin`).
 - **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
-  shows `bd graph --compact` in a float; ids are links, `gd` opens them.
+  shows `bd graph <id> --compact` in a float; ids are links, `gd` opens
+  them. `a` toggles between the single-issue graph and the all-issues
+  graph (`bd graph --all --compact`). The `<leader>bd`-menu `g` entry opens
+  the all-issues graph directly (no id needed); set `graph.scope = "all"`
+  to default the float to all-issues.
 - **Live search** — `:BeadsSearch` re-queries `bd search` per keystroke,
   covering description text the cached picker can't; `<C-a>` includes
   closed issues.
@@ -115,7 +119,7 @@ require("beads").setup({
                  sidebar = "<Tab>", sidebar_toggle = "gs" },
     sidebar  = { jump = { "gd", "<CR>" }, focus_view = "<Tab>", back = "<BS>", quit = { "q", "<Esc>" } },
     memories = { edit = "<CR>", new = "<C-n>", forget = "<C-d>", refetch = "<C-r>" },
-    graph    = { jump = { "gd", "<CR>" }, quit = { "q", "<Esc>" } },
+    graph    = { jump = { "gd", "<CR>" }, scope = "a", quit = { "q", "<Esc>" } },
   },
 
   icons = {
@@ -123,6 +127,11 @@ require("beads").setup({
     deps_down = "↓",        -- "blocks N" column arrow
     deps_up = "↑",          -- "blocked by N" column arrow
   },
+
+  -- Dependency-graph float scope (distinct from float.graph sizing below).
+  -- "issue" graphs a single id; "all" graphs every open issue. Toggle in
+  -- place with the graph `scope` key (default `a`).
+  graph = { scope = "issue" },
 
   -- Float sizes. width/height accept a fraction (0–1 = % of the editor), a
   -- "<n>%" string, or an absolute cell count (>1). Unset heights stay
@@ -255,7 +264,7 @@ keymaps = {
     p = "palette",     -- command palette
     m = "memories",    -- memory browser
     s = "search",      -- live bd search
-    g = "graph",       -- dependency graph (id under cursor, else prompts)
+    g = "graph",       -- dependency graph (id under cursor, else all-issues)
   },
 }
 ```
@@ -304,7 +313,7 @@ beads|ready|search|memories`.
 | `s` / `p` | set status / priority |
 | `a` | add a comment |
 | `c` / `o` | close / reopen |
-| `D` | dependency graph float |
+| `D` | dependency graph float (`a` toggles issue ↔ all-issues) |
 | `gd` or `<CR>` | jump to dependency under cursor |
 | `<Tab>` | focus the links sidebar (opens it if hidden) |
 | `gs` | toggle the links sidebar |
