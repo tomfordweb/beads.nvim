@@ -331,7 +331,7 @@ function M.sidebar_lines(issue, links, opts)
         else
           text = ("    %s"):format(row.label)
         end
-        add_line(lines, hls, truncate(text, width))
+        add_line(lines, hls, truncate(text, width), "BeadsMeta")
         rows[#lines] = { kind = "action", name = row.name }
         if key then
           table.insert(hls, {

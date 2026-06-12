@@ -171,13 +171,13 @@ local defaults = {
     -- log still on the history action).
     sections = {
       "overview",
-      "actions",
       "parent",
       "children",
       "depends_on",
       "blocks",
       "comments",
       "history",
+      "actions",
     },
     history_limit = 3,
   },
