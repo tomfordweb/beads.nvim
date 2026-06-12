@@ -28,3 +28,4 @@
 /.playwright-mcp/
 /assets/usage/*_mid.png
 /assets/usage/*_late.png
+.deps/

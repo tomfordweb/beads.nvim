@@ -19,6 +19,8 @@ jobs:
         nvim: [stable, nightly]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Install Neovim
         uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
@@ -29,12 +31,14 @@ jobs:
       - name: Check out plenary.nvim
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          persist-credentials: false
           repository: nvim-lua/plenary.nvim
           path: .deps/plenary.nvim
 
       - name: Check out telescope.nvim
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          persist-credentials: false
           repository: nvim-telescope/telescope.nvim
           path: .deps/telescope.nvim
 

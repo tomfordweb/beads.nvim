@@ -21,7 +21,11 @@ fmt: ## Apply stylua formatting in place
 fmt-check: ## Check stylua formatting (no writes)
 	stylua --check $(LUA_PATHS)
 
-lint: ## Run luacheck
-	luacheck $(LUA_PATHS)
+lint: ## Run luacheck (falls back to the CI-pinned docker image when not installed)
+	@if command -v luacheck >/dev/null 2>&1; then \
+		luacheck $(LUA_PATHS); \
+	else \
+		docker run --rm -v "$(CURDIR)":/data -w /data ghcr.io/lunarmodules/luacheck:v1.2.0 $(LUA_PATHS); \
+	fi
 
 check: fmt-check lint test ## Run formatting check, lint, and tests (CI parity)

@@ -364,11 +364,11 @@ function M.sidebar_lines(issue, links, opts)
       end
     elseif section == "history" then
       -- last-N change rows surfaced inline (M3); full log stays behind `H`
-      local rows = links.history or {}
-      if #rows > 0 then
+      local hrows = links.history or {}
+      if #hrows > 0 then
         blank_separator()
         add_line(lines, hls, "Recent history", "BeadsSection")
-        for _, row in ipairs(rows) do
+        for _, row in ipairs(hrows) do
           add_line(
             lines,
             hls,
