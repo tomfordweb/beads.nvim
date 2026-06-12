@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Beads (beads.nvim) is broken or misbehaving
+description: Something in beads.nvim is broken or misbehaving
 labels: ["bug"]
 body:
   - type: markdown

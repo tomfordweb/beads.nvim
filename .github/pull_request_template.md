@@ -1,4 +1,4 @@
-<!-- Thanks for contributing to Beads! Keep PRs focused on one change. -->
+<!-- Thanks for contributing to beads.nvim! Keep PRs focused on one change. -->
 
 ## Summary
 

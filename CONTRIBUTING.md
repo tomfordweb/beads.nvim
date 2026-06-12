@@ -60,9 +60,9 @@ tests, matching CI). Run `make help` for the full list.
 ## Documentation is single-source
 
 User docs live in **`README.md`**. The Vim help file `doc/beads.txt` and the
-GitHub Pages site are both generated from it by CI (panvimdoc + mkdocs-material)
-— do not hand-edit `doc/beads.txt`. If your change affects behaviour, update
-`README.md`; the docs workflow regenerates the rest.
+GitHub Pages site are both generated from it by CI (panvimdoc + mkdocs) — do not
+hand-edit `doc/beads.txt`. If your change affects behaviour, update `README.md`;
+the docs workflow regenerates the rest.
 
 ## Commits
 

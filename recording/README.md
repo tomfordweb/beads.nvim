@@ -30,8 +30,10 @@ bind-mounted into the container — `bd` embeds Dolt, so nothing else is needed)
 ## Notes
 
 - **Neovim version**: the Dockerfile installs the official *stable* tarball, not
-  Debian's package — current telescope.nvim needs ≥ 0.11 and Debian trixie ships
-  0.10.x. To pin a specific Neovim, edit the download URL in `Dockerfile`.
+  Debian's package — the telescope.nvim version it clones needs Neovim ≥ 0.11,
+  while Debian trixie ships 0.10.x. This constrains the recording image only; the
+  plugin itself supports Neovim ≥ 0.10. To pin a specific Neovim, edit the
+  download URL in `Dockerfile`.
 - **Synthetic data only**: the demo DB is seeded from `tests/fixtures/demo/`
   (`acme-web-*`, `demo@example.com`) so no personal tracking appears on screen.
 - **Editing the journey**: the detail view is a real editable buffer, so issue

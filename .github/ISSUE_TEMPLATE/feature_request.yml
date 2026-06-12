@@ -1,12 +1,12 @@
 name: Feature request
-description: Suggest an improvement or new capability for Beads
+description: Suggest an improvement or new capability for beads.nvim
 labels: ["enhancement"]
 body:
   - type: textarea
     id: problem
     attributes:
       label: Problem / motivation
-      description: What are you trying to do that Beads makes hard today?
+      description: What are you trying to do that beads.nvim makes hard today?
     validations:
       required: true
 
@@ -14,7 +14,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: What would you like Beads to do? Sketch the command/mapping/config if you have one in mind.
+      description: What would you like beads.nvim to do? Sketch the command/mapping/config if you have one in mind.
     validations:
       required: true
 
