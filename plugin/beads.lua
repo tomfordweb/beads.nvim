@@ -39,6 +39,10 @@ cmd("BeadsDashboard", function()
   require("beads.dashboard").open()
 end, { desc = "Beads: home dashboard" })
 
+cmd("BeadsBoard", function()
+  require("beads.board").open()
+end, { desc = "Beads: kanban board" })
+
 cmd("BeadsSearch", function(o)
   require("beads.picker").search({ default_text = o.args ~= "" and o.args or nil })
 end, { nargs = "?", desc = "Beads: live search (bd search)" })

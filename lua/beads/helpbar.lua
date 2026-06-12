@@ -87,6 +87,15 @@ M.PANES = {
     { action = "scope", label = "all/issue" },
     { action = "quit", label = "close" },
   },
+  board = {
+    group = "board",
+    { action = "open", label = "open" },
+    { action = "status", label = "move" },
+    { action = "left", label = "◀ col" },
+    { action = "right", label = "col ▶" },
+    { action = "refresh", label = "refresh" },
+    { action = "quit", label = "quit" },
+  },
   edit = {
     { key = ":w", label = "save" },
     { key = ":q", label = "close" },

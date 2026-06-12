@@ -102,6 +102,12 @@ M.actions = {
       require("beads.dashboard").open()
     end,
   },
+  board = {
+    desc = "kanban board",
+    fn = function()
+      require("beads.board").open()
+    end,
+  },
 }
 
 --- Resolve a menus value (action name, function, or { desc, fn } table)

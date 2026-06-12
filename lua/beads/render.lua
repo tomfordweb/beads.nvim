@@ -456,6 +456,84 @@ function M.dashboard_lines(summary)
   return lines, hls
 end
 
+--- Title-case a status name for a board column header
+--- ("in_progress" -> "In Progress"). Pure.
+---@param status string|nil
+---@return string
+function M.status_title(status)
+  local s = (status or ""):gsub("_", " ")
+  return (s:gsub("(%a)([%w]*)", function(a, b)
+    return a:upper() .. b:lower()
+  end))
+end
+
+--- Group normalized issues into ordered status columns for the kanban board.
+--- Only the statuses in `statuses` become columns (in that order); issues whose
+--- status falls outside the subset are dropped. A status with no issues still
+--- yields an empty column. Pure.
+---@param list table[] normalized issues
+---@param statuses string[] column status order / subset
+---@return { status: string, items: table[] }[]
+function M.board_group(list, statuses)
+  local by_status = {}
+  for _, issue in ipairs(list or {}) do
+    local s = issue.status or "open"
+    by_status[s] = by_status[s] or {}
+    table.insert(by_status[s], issue)
+  end
+  local out = {}
+  for _, s in ipairs(statuses or {}) do
+    table.insert(out, { status = s, items = by_status[s] or {} })
+  end
+  return out
+end
+
+--- Render one board column (header + issue cards) into lines + highlight specs
+--- + a line->id dispatch map. Each card is two lines: an icon/id/priority row
+--- (id link-styled and gd-jumpable) and the indented, truncated title. Pure.
+---@param group { status: string, items: table[] }
+---@param width integer column inner width
+---@return string[] lines, table[] hls, table<integer, string> rows
+function M.board_column_lines(group, width)
+  local lines, hls, rows = {}, {}, {}
+  add_line(
+    lines,
+    hls,
+    ("%s %s (%d)"):format(
+      issues.status_icon(group.status),
+      M.status_title(group.status),
+      #group.items
+    ),
+    M.status_hl(group.status)
+  )
+  add_line(lines, hls, "")
+  if #group.items == 0 then
+    add_line(lines, hls, " (empty)", "BeadsMeta")
+    return lines, hls, rows
+  end
+  for _, issue in ipairs(group.items) do
+    local head = (" %s %s  %s"):format(
+      issues.status_icon(issue.status),
+      issue.id,
+      issues.priority_label(issue.priority)
+    )
+    add_line(lines, hls, truncate(head, width), issue.status == "closed" and "Comment" or nil)
+    rows[#lines] = issue.id
+    local id_start = head:find(issue.id, 1, true)
+    if id_start then
+      table.insert(hls, {
+        lnum = #lines - 1,
+        col_start = id_start - 1,
+        col_end = id_start - 1 + #issue.id,
+        hl_group = "BeadsLink",
+      })
+    end
+    add_line(lines, hls, truncate("   " .. (issue.title or ""), width), "BeadsMeta")
+    rows[#lines] = issue.id
+  end
+  return lines, hls, rows
+end
+
 --- Link-style highlight tuple for the first issue id on each line.
 --- Intended for surfaces with one id per line (bd graph output); issue
 --- titles may contain hyphenated words, so later matches are skipped to

@@ -20,6 +20,45 @@ function M.center(max_width, max_height)
   }
 end
 
+--- N equally-sized columns laid out as one centered row, each editor-relative,
+--- with a border gap between them — the kanban board's geometry. Generalizes
+--- the single centered float to N side-by-side windows. Column widths shrink to
+--- fit the screen (never below `min_col`), and the whole row stays clamped and
+--- centered. Reads vim.o.columns/lines; otherwise pure.
+---@param n integer column count (>= 1)
+---@param opts { width: integer|nil, height: integer|nil, gap: integer|nil, min_col: integer|nil }|nil
+---@return { relative: string, row: integer, col: integer, width: integer, height: integer }[]
+function M.columns(n, opts)
+  opts = opts or {}
+  n = math.max(1, n)
+  local gap = opts.gap or 2
+  local avail_w = math.max(1, vim.o.columns - 8)
+  local avail_h = math.max(1, vim.o.lines - 6)
+  local height = math.max(1, math.min(opts.height or avail_h, avail_h))
+  local total = math.min(opts.width or avail_w, avail_w)
+  local gaps = gap * (n - 1)
+  local col_w = math.max(opts.min_col or 16, math.floor((total - gaps) / n))
+  -- min_col may push the row past the screen; clamp the width back down so the
+  -- row always fits (columns get narrower rather than overflowing offscreen).
+  if col_w * n + gaps > avail_w then
+    col_w = math.max(1, math.floor((avail_w - gaps) / n))
+  end
+  local footprint = col_w * n + gaps
+  local start_col = math.max(0, math.floor((vim.o.columns - footprint) / 2))
+  local row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1)
+  local out = {}
+  for i = 1, n do
+    table.insert(out, {
+      relative = "editor",
+      row = row,
+      col = start_col + (i - 1) * (col_w + gap),
+      width = col_w,
+      height = height,
+    })
+  end
+  return out
+end
+
 --- Configured dimensions for a float kind ("view"|"edit"|"palette"|"graph").
 ---@param kind string
 ---@return { width: integer, height: integer|nil }

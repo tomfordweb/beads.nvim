@@ -68,6 +68,13 @@ single keystroke, with the change logged in the issue's history.
 blocked / closed counts, ready work, and total — and each row jumps into that
 filter.
 
+### Issues as a kanban board
+
+`:BeadsBoard` lays every issue out as status columns — open, in progress,
+blocked, and closed by default (configurable). `h`/`l` move between columns,
+`j`/`k` within one, `<CR>` opens the detail view, and `s` moves a card to
+another status.
+
 ### Walk the dependency graph
 
 ![Opening the issue and all-issues dependency graphs](assets/usage/graph.gif)
@@ -132,6 +139,9 @@ the all-issues view, and `gd` follows any id straight to its issue.
 - **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
   project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
   to jump into that status filter, `r` for ready, `q` to close.
+- **Kanban board** — `:BeadsBoard` (or the `<leader>bd` menu `k`) groups every
+  issue into status columns; `h`/`l` switch columns, `<CR>` opens detail, and
+  `s` moves a card to another status.
 
 ## Requirements
 
@@ -453,7 +463,7 @@ Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 `:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`, `:BeadsDashboard`,
-`:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
+`:BeadsBoard`, `:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
 beads|ready|search|memories`.
 
 ### Picker mappings
