@@ -132,6 +132,46 @@ on tmux resize / zoom), and underlined **link styling** for jumpable ids.
   lets your markdown autoformatters run on `:w`. The plugin works fully without
   it (it ships its own `Beads*` highlights).
 
+### Optional UI enhancers
+
+beads.nvim drives every prompt and message through the standard `vim.ui.select`,
+`vim.ui.input`, and `vim.notify`. It never overrides them itself, so any plugin
+that improves those APIs upgrades beads automatically — no configuration on the
+beads side. None are required; install them only if you want the nicer look.
+
+- [dressing.nvim](https://github.com/stevearc/dressing.nvim) — turns the create
+  form, priority / type / status pickers, the command palette, and board moves
+  into bordered modal selects and inputs (and can route selects through
+  Telescope):
+
+  ```lua
+  {
+    "stevearc/dressing.nvim",
+    event = "VeryLazy",
+    opts = {
+      input = { border = "rounded" },
+      select = { backend = { "telescope", "builtin" }, builtin = { border = "rounded" } },
+    },
+  }
+  ```
+
+- [nvim-notify](https://github.com/rcarriga/nvim-notify) — renders beads' status
+  and error messages as toast notifications instead of `:messages` lines:
+
+  ```lua
+  {
+    "rcarriga/nvim-notify",
+    config = function()
+      vim.notify = require("notify")
+    end,
+  }
+  ```
+
+These override `vim.ui.*` / `vim.notify` for your **whole** editor, not just
+beads — that is why they are recommendations rather than dependencies. If you
+already run an equivalent (noice.nvim, snacks.nvim, mini.notify, …), beads picks
+it up with nothing extra.
+
 ## Installation
 
 First install [`bd`](https://github.com/gastownhall/beads) and confirm it is on
