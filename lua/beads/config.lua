@@ -22,7 +22,7 @@
 ---@field mappings BeadsMappings
 ---@field icons { status: table<string, string>, deps_down: string, deps_up: string }
 ---@field float { border: string|table, view: table, edit: table, palette: table, graph: table }
----@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[] }
+---@field edit { inline: boolean, discard_on_quit: boolean, autosave: boolean, autosave_debounce_ms: integer, persistent_undo: boolean, undodir: string|nil, guard_keys: string[], osc52: boolean }
 ---@field sidebar { enabled: boolean, width: integer, position: "left"|"right", sections: string[], history_limit: integer }
 ---@field helpbar boolean
 ---@field notify boolean
@@ -125,6 +125,10 @@ local defaults = {
     autosave_debounce_ms = 800,
     persistent_undo = false, -- keep undo history across edit sessions
     undodir = nil, -- defaults to stdpath("state")/beads/undo
+    -- opt-in: over SSH/tmux with no clipboard provider, route "+/"* through
+    -- Neovim 0.10's built-in OSC52 so yanks reach the local clipboard. No-op
+    -- when a clipboard already works or the session is local.
+    osc52 = false,
     -- normal-mode keys to neutralize inside the edit buffer only, so a global
     -- map (e.g. oil.nvim's "-") can't fire mid-edit. Insert mode is untouched.
     guard_keys = {},

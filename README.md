@@ -145,6 +145,8 @@ require("beads").setup({
     undodir = nil,              -- defaults to stdpath("state")/beads/undo
     guard_keys = {},            -- normal-mode keys to neutralize in the editor
                                 -- only (e.g. { "-" } to tame oil.nvim mid-edit)
+    osc52 = false,              -- opt-in: route "+/"* through OSC52 over SSH/tmux
+                                -- when no clipboard provider exists (see :checkhealth)
   },
 
   -- linked-issues sidebar next to the detail view

@@ -35,9 +35,27 @@ function M.check()
     end
   else
     health.error(("bd binary %q not executable"):format(bd_bin), {
-      "Install beads: https://github.com/steveyegge/beads",
+      "Install beads: https://github.com/gastownhall/beads",
       "Or point config.bd_bin at the binary",
     })
+  end
+
+  -- Clipboard / OSC52 advisory (M8): clipboard is global, so only warn when a
+  -- remote session likely can't reach the system clipboard.
+  local clip = require("beads.clipboard")
+  if clip.has_provider() then
+    health.ok("clipboard provider available")
+  elseif clip.is_remote() then
+    health.warn(
+      "remote session (SSH/tmux) with no clipboard provider — yanks won't reach your local clipboard",
+      {
+        "Neovim 0.10 ships OSC52: set `edit.osc52 = true`, or point vim.g.clipboard at vim.ui.clipboard.osc52",
+        "Then `set clipboard=unnamedplus` to route yanks through it",
+        "tmux: `set -g set-clipboard on`",
+      }
+    )
+  else
+    health.info("no clipboard provider; yanks stay in Neovim registers")
   end
 
   local root = require("beads.config").get().cwd or vim.fs.root(0, ".beads")

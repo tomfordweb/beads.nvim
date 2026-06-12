@@ -4,6 +4,7 @@ local M = {}
 ---@param opts table|nil see beads.config defaults
 function M.setup(opts)
   require("beads.config").setup(opts)
+  require("beads.clipboard").maybe_enable() -- opt-in OSC52 over SSH/tmux (M8)
 
   local keymaps = require("beads.config").get().keymaps
   if type(keymaps) == "table" then
