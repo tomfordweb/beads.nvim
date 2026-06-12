@@ -11,6 +11,11 @@ docs_dir: docs
 theme:
   name: readthedocs
 
+# Responsive fixes layered over the theme. Sourced from assets/extra.css, which
+# the docs workflow copies into docs/assets/ alongside the README's images.
+extra_css:
+  - assets/extra.css
+
 markdown_extensions:
   - admonition
   - toc:

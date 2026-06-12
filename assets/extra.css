@@ -1,0 +1,39 @@
+/* Responsive hardening for the README-on-mkdocs site (readthedocs theme).
+   The README is content-heavy: 1200px demo GIFs, wide Lua config blocks with
+   long inline comments, and a few tables. On narrow viewports these must stay
+   inside their column rather than forcing the whole page to scroll sideways. */
+
+/* Demo GIFs (1200px native) and any other image scale to their column. */
+.rst-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Wide code blocks scroll within their own box, not the page. */
+.rst-content pre,
+.rst-content .highlight,
+.rst-content .codehilite,
+.rst-content div[class^="highlight"] {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.rst-content pre code {
+  white-space: pre;
+}
+
+/* Tables (highlight groups, key mappings) scroll horizontally when they can't
+   fit; without this the table widens the page on phones. */
+.rst-content table.docutils,
+.rst-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Long inline code (e.g. `bd update --body-file -`) wraps instead of
+   overflowing the text column on small screens. */
+.rst-content code.literal {
+  word-break: break-word;
+}
