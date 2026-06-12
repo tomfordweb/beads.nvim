@@ -1,0 +1,26 @@
+site_name: beads.nvim
+site_description: Neovim UI for the bd issue tracker
+site_url: https://tomfordweb.github.io/beads.nvim/
+repo_url: https://github.com/tomfordweb/beads.nvim
+repo_name: tomfordweb/beads.nvim
+
+# Deliberately minimal: the README is the single source, copied to
+# docs/index.md by the docs workflow. docs/ is gitignored.
+docs_dir: docs
+
+theme:
+  name: readthedocs
+
+# Responsive fixes layered over the theme. Sourced from assets/extra.css, which
+# the docs workflow copies into docs/assets/ alongside the README's images.
+extra_css:
+  - assets/extra.css
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - fenced_code
+
+nav:
+  - Home: index.md

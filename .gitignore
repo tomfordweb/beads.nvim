@@ -1,0 +1,31 @@
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+
+# Live beads working data — never publish personal tracking.
+# Tests use synthetic fixtures under tests/fixtures/ instead.
+/.beads/
+
+# mkdocs build inputs/outputs. docs/ is generated from README.md in CI
+# (single-source); the committed vim help lives in doc/ (singular).
+/docs/
+/site/
+
+# Local launch/marketing notes + internal audits — never published.
+# (notes/ lives under docs-internal/ now.)
+/docs-internal/
+
+# Frames extracted from the demo GIF while iterating on the recording (E9).
+# The committed asset is assets/demo.gif; the per-frame PNGs are throwaway.
+/assets/frame_*.png
+
+# Local MCP config: machine-specific absolute paths (never publish).
+/.mcp.json
+
+# Playwright MCP scratch output (screenshots, snapshots).
+/.playwright-mcp/
+/assets/usage/*_mid.png
+/assets/usage/*_late.png
+.deps/

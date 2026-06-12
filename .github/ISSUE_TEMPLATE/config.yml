@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/tomfordweb/beads.nvim/discussions
+    about: Ask usage questions or share ideas in Discussions.
+  - name: beads (bd) issue tracker
+    url: https://github.com/gastownhall/beads
+    about: For bugs in the bd CLI itself (not the Neovim UI), report upstream.

@@ -1,0 +1,452 @@
+local render = require("beads.render")
+local issues = require("beads.issues")
+local fixtures = require("tests.fixtures.issues")
+
+describe("render.strip_ansi", function()
+  it("removes SGR sequences", function()
+    assert.equals("bold", render.strip_ansi("\27[1mbold\27[0m"))
+    assert.equals("BLOCKED", render.strip_ansi("\27[1mBLOCKED\27[m"))
+    assert.equals("plain", render.strip_ansi("plain"))
+  end)
+end)
+
+describe("render.entry_columns", function()
+  it("renders full issue columns", function()
+    local cols = render.entry_columns(issues.normalize(fixtures.show_issue))
+    assert.equals("beads_nvim-hcl", cols.id)
+    assert.equals("◐", cols.icon)
+    assert.equals("P2", cols.priority)
+    assert.equals("task", cols.type)
+    assert.equals("↓1 ↑1", cols.deps)
+  end)
+
+  it("renders empty deps column when no relations", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    assert.equals("", render.entry_columns(issue).deps)
+  end)
+
+  it("renders only dependents", function()
+    local cols = render.entry_columns(issues.normalize(fixtures.list_issue))
+    assert.equals("↑5", cols.deps)
+  end)
+end)
+
+describe("render.detail_lines", function()
+  local function find_line(lines, pattern)
+    for i, l in ipairs(lines) do
+      if l:match(pattern) then
+        return i, l
+      end
+    end
+    return nil
+  end
+
+  it("renders header, status line, and description", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines = render.detail_lines(issue)
+    assert.equals("# Phase 2: render module + picker", lines[1])
+    -- M12: issue id is prominent in the body header, right under the title
+    assert.equals("beads_nvim-hcl", lines[2])
+    assert.is_truthy(lines[3]:match("in_progress"))
+    assert.is_truthy(lines[3]:match("P2"))
+    assert.is_truthy(find_line(lines, "^## Description"))
+    assert.is_truthy(find_line(lines, "Build the telescope picker%."))
+    assert.is_truthy(find_line(lines, "With filter cycling%."))
+  end)
+
+  it("highlights the header id line with BeadsId (M12)", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines, hls = render.detail_lines(issue)
+    local id_lnum = select(1, find_line(lines, "^beads_nvim%-hcl$"))
+    assert.is_truthy(id_lnum, "id line present in header")
+    local found = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsId" and h.lnum == id_lnum - 1 then
+        found = true
+      end
+    end
+    assert.is_true(found, "id line carries BeadsId highlight")
+  end)
+
+  it("renders dep ids as standalone cWORDs", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines = render.detail_lines(issue)
+    local _, dep_line = find_line(lines, "beads_nvim%-ay7")
+    assert.is_truthy(dep_line)
+    -- id must be whitespace-delimited so expand("<cWORD>") yields it exactly
+    local found = false
+    for word in dep_line:gmatch("%S+") do
+      if word == "beads_nvim-ay7" then
+        found = true
+      end
+    end
+    assert.is_true(found)
+    assert.equals("beads_nvim-ay7", issues.match_issue_id("beads_nvim-ay7"))
+  end)
+
+  it("renders placeholder for empty description and no dep section", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    local lines = render.detail_lines(issue)
+    assert.is_truthy(find_line(lines, "_%(none%)_"))
+    assert.is_nil(find_line(lines, "^## Depends on"))
+  end)
+
+  it("styles dep ids as links spanning exactly the id", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines, hls = render.detail_lines(issue)
+    local found = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        found = true
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        assert.equals(span, issues.match_issue_id(span))
+      end
+    end
+    assert.is_true(found, "no BeadsLink highlight emitted")
+  end)
+
+  it("returns highlights within line bounds", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local lines, hls = render.detail_lines(issue)
+    assert.is_true(#hls > 0)
+    for _, h in ipairs(hls) do
+      assert.is_true(h.lnum >= 0 and h.lnum < #lines, "lnum in range")
+      assert.is_string(h.hl_group)
+    end
+  end)
+
+  it("shows dependent count", function()
+    local issue = issues.normalize(fixtures.list_issue)
+    local lines = render.detail_lines(issue)
+    assert.is_truthy(find_line(lines, "Blocks 5 other issue"))
+  end)
+
+  it("renders comments section with author, date, and indented body", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local comments = {
+      { author = "Demo User", text = "first\nsecond", created_at = "2026-06-11T13:00:37Z" },
+    }
+    local lines = render.detail_lines(issue, comments)
+    assert.is_truthy(find_line(lines, "^## Comments %(1%)"))
+    assert.is_truthy(find_line(lines, "Demo User — 2026%-06%-11"))
+    assert.is_truthy(find_line(lines, "^  first$"))
+    assert.is_truthy(find_line(lines, "^  second$"))
+  end)
+
+  it("renders children section with completion count and link-styled ids", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    local children = {
+      issues.normalize({ id = "beads_nvim-c1", title = "kid one", status = "closed", priority = 2 }),
+      issues.normalize({ id = "beads_nvim-c2", title = "kid two", status = "open", priority = 1 }),
+    }
+    local lines, hls = render.detail_lines(issue, nil, children)
+    assert.is_truthy(find_line(lines, "^## Children %(1/2 closed%)"))
+    -- child id is a standalone cWORD and link-styled
+    local _, row = find_line(lines, "beads_nvim%-c2")
+    local found = false
+    for word in row:gmatch("%S+") do
+      if word == "beads_nvim-c2" then
+        found = true
+      end
+    end
+    assert.is_true(found)
+    local linked = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        if span == "beads_nvim-c2" or span == "beads_nvim-c1" then
+          linked = true
+        end
+      end
+    end
+    assert.is_true(linked, "child id not link-styled")
+  end)
+
+  it("omits children section when nil or empty", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    assert.is_nil(find_line(render.detail_lines(issue), "^## Children"))
+    assert.is_nil(find_line(render.detail_lines(issue, nil, {}), "^## Children"))
+  end)
+
+  it("omits comments section when empty or nil", function()
+    local issue = issues.normalize(fixtures.show_issue)
+    assert.is_nil(find_line(render.detail_lines(issue, {}), "^## Comments"))
+    assert.is_nil(find_line(render.detail_lines(issue), "^## Comments"))
+  end)
+end)
+
+describe("render.dashboard_lines", function()
+  local function find_line(lines, pat)
+    for _, l in ipairs(lines) do
+      if l:match(pat) then
+        return l
+      end
+    end
+    return nil
+  end
+
+  it("renders a status count row per status plus ready/total (F1)", function()
+    local summary = {
+      open_issues = 11,
+      in_progress_issues = 5,
+      blocked_issues = 3,
+      deferred_issues = 1,
+      closed_issues = 84,
+      ready_issues = 8,
+      total_issues = 101,
+    }
+    local lines, hls = render.dashboard_lines(summary)
+    assert.equals("beads.nvim", lines[1])
+    assert.is_truthy(find_line(lines, "open%s+11"))
+    assert.is_truthy(find_line(lines, "in progress%s+5"))
+    assert.is_truthy(find_line(lines, "blocked%s+3"))
+    assert.is_truthy(find_line(lines, "closed%s+84"))
+    assert.is_truthy(find_line(lines, "ready%s+8"))
+    assert.is_truthy(find_line(lines, "total%s+101"))
+    assert.is_true(#hls > 0)
+  end)
+
+  it("defaults missing counts to 0", function()
+    local lines = render.dashboard_lines({})
+    assert.is_truthy(find_line(lines, "open%s+0"))
+    assert.is_truthy(find_line(lines, "total%s+0"))
+  end)
+
+  it("tolerates a nil summary", function()
+    assert.has_no.errors(function()
+      render.dashboard_lines(nil)
+    end)
+  end)
+
+  it("shows an epics-to-close nudge only when > 0", function()
+    assert.is_nil(
+      find_line(render.dashboard_lines({ epics_eligible_for_closure = 0 }), "epics to close")
+    )
+    assert.is_truthy(
+      find_line(render.dashboard_lines({ epics_eligible_for_closure = 2 }), "epics to close%s+2")
+    )
+  end)
+end)
+
+describe("render.sidebar_lines", function()
+  local DEFAULT_SECTIONS = { "overview", "parent", "children", "depends_on", "blocks" }
+
+  local function build(sections)
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, fixtures.dependents)
+    return render.sidebar_lines(
+      issue,
+      links,
+      { sections = sections or DEFAULT_SECTIONS, width = 34 }
+    )
+  end
+
+  local function find_line(lines, pattern)
+    for i, l in ipairs(lines) do
+      if l:match(pattern) then
+        return i, l
+      end
+    end
+    return nil
+  end
+
+  it("renders all populated sections in configured order", function()
+    local lines = build()
+    local overview = find_line(lines, "^Overview$")
+    local parent = find_line(lines, "^Parent$")
+    local children = find_line(lines, "^Children$")
+    local depends = find_line(lines, "^Depends on$")
+    local blocks = find_line(lines, "^Blocks$")
+    assert.is_truthy(overview)
+    assert.is_true(
+      overview < parent and parent < children and children < depends and depends < blocks
+    )
+  end)
+
+  it("renders action rows with key hints and tags them in the rows map", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    local lines, _, rows = render.sidebar_lines(issue, links, {
+      sections = { "actions" },
+      width = 34,
+      action_keys = { status = "s", priority = "p", close = "c" },
+    })
+    local header = find_line(lines, "^Actions$")
+    assert.is_truthy(header)
+    local status_lnum, status_line = find_line(lines, "status: ")
+    assert.is_truthy(status_lnum)
+    assert.is_truthy(status_line:find(" s  status: ", 1, true))
+    assert.are.same({ kind = "action", name = "status" }, rows[status_lnum])
+    -- open issue offers close, not reopen
+    local close_lnum = find_line(lines, "close$")
+    assert.are.same({ kind = "action", name = "close" }, rows[close_lnum])
+    assert.is_nil(find_line(lines, "reopen"))
+  end)
+
+  it("offers reopen instead of close for closed issues", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    issue.status = "closed"
+    local lines, _, rows = render.sidebar_lines(
+      issue,
+      issues.partition_links(issue, {}),
+      { sections = { "actions" }, width = 34 }
+    )
+    local lnum = find_line(lines, "reopen")
+    assert.is_truthy(lnum)
+    assert.are.same({ kind = "action", name = "reopen" }, rows[lnum])
+  end)
+
+  it("renders the comments section from links.comments", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    links.comments = {
+      { author = "tom", created_at = "2026-06-11T10:00:00Z", text = "first note" },
+      { author = "dev", created_at = "2026-06-12T10:00:00Z", text = "second" },
+    }
+    local lines = render.sidebar_lines(issue, links, { sections = { "comments" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Comments %(2%)$"))
+    assert.is_truthy(find_line(lines, "tom"))
+    assert.is_truthy(find_line(lines, "first note"))
+  end)
+
+  it("omits the comments section when empty", function()
+    local lines = build({ "comments" })
+    assert.is_nil(find_line(lines, "^Comments"))
+  end)
+
+  it("tags link entry lines (id + title) in the rows map", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, fixtures.dependents)
+    local lines, _, rows =
+      render.sidebar_lines(issue, links, { sections = { "children" }, width = 34 })
+    local tagged = 0
+    for lnum in pairs(rows) do
+      assert.equals("link", rows[lnum].kind)
+      assert.is_truthy(rows[lnum].id)
+      assert.is_truthy(lines[lnum])
+      tagged = tagged + 1
+    end
+    assert.is_true(tagged >= 1)
+  end)
+
+  it("renders an inline history summary from links.history (M3)", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local links = issues.partition_links(issue, {})
+    links.history = {
+      { date = "2026-06-11 12:00", committer = "dev", summary = "status: open → closed" },
+    }
+    local lines = render.sidebar_lines(issue, links, { sections = { "history" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Recent history$"))
+    assert.is_truthy(find_line(lines, "status: open → closed"))
+  end)
+
+  it("omits the history section when no rows are provided", function()
+    local lines = build({ "history" })
+    assert.is_nil(find_line(lines, "^Recent history$"))
+  end)
+
+  it("respects custom section selection and order", function()
+    local lines = build({ "blocks", "parent" })
+    assert.is_nil(find_line(lines, "^Overview$"))
+    assert.is_nil(find_line(lines, "^Children"))
+    local blocks = find_line(lines, "^Blocks$")
+    local parent = find_line(lines, "^Parent$")
+    assert.is_true(blocks < parent)
+  end)
+
+  it("omits empty sections", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    local links = issues.partition_links(issue, {})
+    local lines = render.sidebar_lines(issue, links, { sections = DEFAULT_SECTIONS, width = 34 })
+    assert.is_nil(find_line(lines, "^Parent$"))
+    assert.is_nil(find_line(lines, "^Children"))
+    assert.is_truthy(find_line(lines, "^Overview$"))
+  end)
+
+  it("counts multi-entry sections in the header", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local two_children = {
+      fixtures.dependents[1],
+      vim.tbl_extend("force", vim.deepcopy(fixtures.dependents[1]), { id = "beads_nvim-u2f.1.2" }),
+    }
+    local links = issues.partition_links(issue, two_children)
+    local lines = render.sidebar_lines(issue, links, { sections = { "children" }, width = 34 })
+    assert.is_truthy(find_line(lines, "^Children %(2%)$"))
+  end)
+
+  it("ids are standalone cWORDs with BeadsLink spans", function()
+    local lines, hls = build()
+    local _, entry = find_line(lines, "beads_nvim%-u2f%.1%.1")
+    local found = false
+    for word in entry:gmatch("%S+") do
+      if word == "beads_nvim-u2f.1.1" then
+        found = true
+      end
+    end
+    assert.is_true(found)
+    local linked = false
+    for _, h in ipairs(hls) do
+      if h.hl_group == "BeadsLink" then
+        linked = true
+        local span = lines[h.lnum + 1]:sub(h.col_start + 1, h.col_end)
+        assert.equals(span, issues.match_issue_id(span))
+      end
+    end
+    assert.is_true(linked)
+  end)
+
+  it("truncates long titles to the configured width", function()
+    local issue = issues.normalize(fixtures.show_child_issue)
+    local long = {
+      {
+        id = "beads_nvim-l0ng",
+        title = string.rep("very long title ", 10),
+        status = "open",
+        dependency_type = "blocks",
+      },
+    }
+    local links = issues.partition_links(issue, long)
+    local lines = render.sidebar_lines(issue, links, { sections = { "blocks" }, width = 30 })
+    local _, title_line = find_line(lines, "very long")
+    assert.is_true(vim.fn.strdisplaywidth(title_line) <= 30)
+    assert.is_truthy(title_line:find("…"))
+  end)
+
+  it("dims closed entries", function()
+    local lines, hls = build()
+    local closed_lnum = find_line(lines, "beads_nvim%-ay7") - 1
+    local dimmed = false
+    for _, h in ipairs(hls) do
+      if h.lnum == closed_lnum and h.hl_group == "Comment" then
+        dimmed = true
+      end
+    end
+    assert.is_true(dimmed)
+  end)
+
+  it("renders placeholder when nothing to show", function()
+    local issue = issues.normalize(fixtures.sparse_issue)
+    local links = issues.partition_links(issue, {})
+    local lines =
+      render.sidebar_lines(issue, links, { sections = { "parent", "children" }, width = 34 })
+    assert.are.same({ "(no links)" }, lines)
+  end)
+end)
+
+describe("render.link_spans", function()
+  it("links the first id per line, byte-accurate", function()
+    local lines = {
+      "  ├── ✓ beads_nvim-ay7 ● P2 Phase 1: dep-jump polish",
+      "  no ids here",
+      "bundle-analyzer-v2y something",
+    }
+    local hls = render.link_spans(lines)
+    assert.equals(2, #hls)
+    assert.equals("beads_nvim-ay7", lines[1]:sub(hls[1].col_start + 1, hls[1].col_end))
+    assert.equals(2, hls[2].lnum)
+    assert.equals("bundle-analyzer-v2y", lines[3]:sub(hls[2].col_start + 1, hls[2].col_end))
+    for _, h in ipairs(hls) do
+      assert.equals("BeadsLink", h.hl_group)
+    end
+  end)
+end)

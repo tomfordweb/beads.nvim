@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in beads.nvim is broken or misbehaving
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Please fill in the details below.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I run :Beads ... I expected ... but got ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Neovim with ...
+        2. Run :Beads
+        3. Press ...
+    validations:
+      required: true
+
+  - type: input
+    id: nvim-version
+    attributes:
+      label: Neovim version
+      description: Output of `nvim --version` (first line)
+      placeholder: NVIM v0.10.0
+    validations:
+      required: true
+
+  - type: input
+    id: bd-version
+    attributes:
+      label: bd version
+      description: Output of `bd version`
+      placeholder: bd version 1.0.4
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant beads.nvim setup
+      description: Your `require("beads").setup({ ... })` block, if customized.
+      render: lua
+
+  - type: textarea
+    id: checkhealth
+    attributes:
+      label: ":checkhealth beads" output
+      description: Paste the output if relevant.
+      render: text

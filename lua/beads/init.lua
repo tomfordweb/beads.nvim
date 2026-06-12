@@ -1,0 +1,50 @@
+local M = {}
+
+--- Configure beads.nvim. Optional — all commands work with defaults.
+---@param opts table|nil see beads.config defaults
+function M.setup(opts)
+  require("beads.config").setup(opts)
+  require("beads.clipboard").maybe_enable() -- opt-in OSC52 over SSH/tmux (M8)
+
+  local keymaps = require("beads.config").get().keymaps
+  if type(keymaps) == "table" then
+    local actions = require("beads.actions")
+    for key, value in pairs(keymaps.menus or {}) do
+      if value ~= false then
+        local fn, desc = actions.resolve(value)
+        if fn then
+          vim.keymap.set("n", keymaps.base .. key, fn, { desc = "Beads: " .. desc, silent = true })
+        else
+          vim.notify(
+            ("beads.nvim: unknown keymap action %q for key %q"):format(tostring(value), key),
+            vim.log.levels.WARN
+          )
+        end
+      end
+    end
+    -- Optional default action on the bare `base` prefix: <leader>bd alone fires
+    -- it. With menu keys also bound under the same prefix, nvim waits
+    -- `timeoutlen` to disambiguate before firing the default.
+    if keymaps.default ~= nil and keymaps.default ~= false then
+      local fn, desc = actions.resolve(keymaps.default)
+      if fn then
+        vim.keymap.set("n", keymaps.base, fn, { desc = "Beads: " .. desc, silent = true })
+      else
+        vim.notify(
+          ("beads.nvim: unknown default keymap action %q"):format(tostring(keymaps.default)),
+          vim.log.levels.WARN
+        )
+      end
+    end
+  end
+end
+
+function M.open(opts)
+  require("beads.picker").open(opts)
+end
+
+function M.show(id)
+  require("beads.view").open(id)
+end
+
+return M
