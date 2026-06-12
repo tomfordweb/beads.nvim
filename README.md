@@ -81,6 +81,57 @@ sidebar, and the dependency graph](assets/demo.gif)
   project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
   to jump into that status filter, `r` for ready, `q` to close.
 
+## Walkthroughs
+
+Short clips of the common flows (synthetic demo data — no personal tracking on
+screen). Each is rendered headlessly by the `recording/` pipeline.
+
+### Browse and filter
+
+![Cycling status and type filters in the Telescope issue picker](assets/usage/browse.gif)
+
+`:Beads` opens a Telescope picker over `bd list`. Cycle the status / priority /
+type / label filters (`<C-s>`, `<C-y>`, `<C-t>`, `<C-l>`) or type to filter by
+text — one fetch, client-side filtering, no subprocess per keystroke.
+
+### Create an issue
+
+![Creating an issue through the :BeadsCreate form](assets/usage/create.gif)
+
+`:BeadsCreate` walks a quick form — title → type → priority → dependencies —
+then drops you into the new issue's detail view. (`:BeadsQuick` is the one-line
+version.)
+
+### Open and edit
+
+![Appending to an issue's description and saving with :w](assets/usage/edit.gif)
+
+Selecting an issue opens its description as a real, always-editable buffer:
+every vim keybind works, and `:w` persists the change via `bd update`.
+
+### Change status and act on an issue
+
+![Changing an issue's status to blocked from the sidebar](assets/usage/status.gif)
+
+`<Tab>` jumps to the sidebar, where the Actions rows drive the issue — press
+`s` to change status (and `p` priority, `a` comment, `c` close, …), each a
+single keystroke, with the change logged in the issue's history.
+
+### Project status at a glance
+
+![The home dashboard showing status counts, ready, and total](assets/usage/dashboard.gif)
+
+`:BeadsDashboard` summarises the project from `bd stats` — open / in progress /
+blocked / closed counts, ready work, and total — and each row jumps into that
+filter.
+
+### Walk the dependency graph
+
+![Opening the issue and all-issues dependency graphs](assets/usage/graph.gif)
+
+From the sidebar, `D` opens the dependency graph for the issue; `a` toggles to
+the all-issues view, and `gd` follows any id straight to its issue.
+
 ## Requirements
 
 - Neovim ≥ 0.10 (`vim.system`)
