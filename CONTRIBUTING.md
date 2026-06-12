@@ -91,5 +91,7 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`.
 - Require the `test`, `lint`, and `docs` status checks to pass
 - Disallow force-pushes and direct pushes to `main`
 
-Maintainers: enable these under **Settings → Branches → Branch protection
-rules** before accepting external contributions.
+Maintainers: configure this under **Settings → Rules → Rulesets** (or the older
+**Settings → Branches**). Add it after CI has run on `main` once — the required
+status-check names (`nvim stable`, `nvim nightly`, `stylua`, `vimdoc`) only
+appear in the picker after their first run.
