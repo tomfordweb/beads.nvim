@@ -82,6 +82,14 @@ PROJECT STATUS AT A GLANCE ~
 that filter.
 
 
+ISSUES AS A KANBAN BOARD ~
+
+`:BeadsBoard` lays every issue out as status columns — open, in progress,
+blocked, and closed by default (configurable). `h`/`l` move between columns,
+`j`/`k` within one, `<CR>` opens the detail view, and `s` moves a card to
+another status.
+
+
 WALK THE DEPENDENCY GRAPH ~
 
 From the sidebar, `D` opens the dependency graph for the issue; `a` toggles to
@@ -145,6 +153,16 @@ FEATURES                                           *beads-beads.nvim-features*
 - **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
     project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
     to jump into that status filter, `r` for ready, `q` to close.
+- **Kanban board** — `:BeadsBoard` (or the `<leader>bd` menu `k`) groups every
+    issue into status columns; `h`/`l` switch columns, `<CR>` opens detail, and
+    `s` moves a card to another status.
+- **Wisps** — `:BeadsWisps` (or the `<leader>bd` menu `w`) lists bd’s ephemeral
+    agent-runtime issues grouped by type; `p` promotes one to a permanent bead
+    (`bd promote`). Niche — most users never need it.
+- **Formulas / molecules** — `:BeadsFormulas` (or the `<leader>bd` menu `f`)
+    lists bd’s workflow formulas; pick one to show its structure or pour it into a
+    persistent molecule (`bd mol pour`, with `--var` substitutions). `mol current`
+    / `mol progress` are also in the command palette.
 
 
 REQUIREMENTS                                   *beads-beads.nvim-requirements*
@@ -452,6 +470,10 @@ shorthand for:
         m = "memories",    -- memory browser
         s = "search",      -- live bd search
         g = "graph",       -- dependency graph (id under cursor, else all-issues)
+        h = "dashboard",   -- home dashboard (bd stats)
+        k = "board",       -- kanban board (status columns)
+        w = "wisps",       -- ephemeral wisps browser
+        f = "formulas",    -- formulas / pour molecules
       },
     }
 <
@@ -471,15 +493,16 @@ Menu values are builtin action names, a function, or `{ desc, fn }`
 <
 
 Builtinactions: `browse`, `all`, `open`, `in_progress`, `blocked`, `closed`,
-`ready`, `create`, `quick`, `palette`, `memories`, `search`, `graph`.
+`ready`, `create`, `quick`, `palette`, `memories`, `search`, `graph`,
+`dashboard`, `board`, `wisps`, `formulas`.
 
 
 USAGE                                                 *beads-beads.nvim-usage*
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
 `:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`, `:BeadsDashboard`,
-`:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
-beads|ready|search|memories`.
+`:BeadsBoard`, `:BeadsWisps`, `:BeadsFormulas`, `:BeadsSearch [text]`,
+`:BeadsGraph [id]`. Also `:Telescope beads beads|ready|search|memories`.
 
 
 PICKER MAPPINGS ~
