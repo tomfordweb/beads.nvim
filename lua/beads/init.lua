@@ -22,6 +22,20 @@ function M.setup(opts)
         end
       end
     end
+    -- Optional default action on the bare `base` prefix: <leader>bd alone fires
+    -- it. With menu keys also bound under the same prefix, nvim waits
+    -- `timeoutlen` to disambiguate before firing the default.
+    if keymaps.default ~= nil and keymaps.default ~= false then
+      local fn, desc = actions.resolve(keymaps.default)
+      if fn then
+        vim.keymap.set("n", keymaps.base, fn, { desc = "Beads: " .. desc, silent = true })
+      else
+        vim.notify(
+          ("beads.nvim: unknown default keymap action %q"):format(tostring(keymaps.default)),
+          vim.log.levels.WARN
+        )
+      end
+    end
   end
 end
 

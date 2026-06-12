@@ -39,6 +39,6 @@ bind-mounted into the container — `bd` embeds Dolt, so nothing else is needed)
 - **Editing the journey**: the detail view is a real editable buffer, so issue
   action keys (`D` graph, `s` status, …) only fire from the **sidebar**. Never
   send them to the view in the tape or Neovim eats them as buffer edits.
-- The interactive tmux+asciinema harness under `notes/scripts/` (gitignored) is
+- The interactive tmux+asciinema harness under `docs-internal/notes/scripts/` (gitignored) is
   a separate, owner-run path for the launch screenshots/casts; this committed
   VHS pipeline is the one the README GIF comes from.

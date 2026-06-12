@@ -1,5 +1,6 @@
 ---@class BeadsKeymaps
 ---@field base string prefix prepended to every menu key (e.g. "<leader>b")
+---@field default string|fun()|{ desc: string|nil, fn: fun() }|nil action bound to `base` itself (e.g. "board"); nil leaves the prefix unbound
 ---@field menus table<string, string|fun()|{ desc: string|nil, fn: fun() }|false>
 --- menu values: builtin action name (see beads.actions), a function, a
 --- { desc, fn } table, or false to disable a default entry
@@ -268,6 +269,10 @@ local function normalize_keymaps(keymaps)
   if type(keymaps) == "table" then
     return {
       base = keymaps.base or default_keymaps.base,
+      -- action bound to the bare `base` prefix (no menu key). nil leaves the
+      -- prefix unbound, as before; set it to e.g. "board" so <leader>bd alone
+      -- opens the kanban board.
+      default = keymaps.default,
       -- user menus replace the defaults wholesale when given; mixing
       -- defaults into custom single-letter menus surprises more than helps
       menus = keymaps.menus or vim.deepcopy(default_keymaps.menus),

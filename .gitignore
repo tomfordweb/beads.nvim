@@ -14,7 +14,7 @@
 /site/
 
 # Local launch/marketing notes + internal audits — never published.
-/notes/
+# (notes/ lives under docs-internal/ now.)
 /docs-internal/
 
 # Frames extracted from the demo GIF while iterating on the recording (E9).

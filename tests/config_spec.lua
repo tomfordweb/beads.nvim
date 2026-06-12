@@ -97,6 +97,15 @@ describe("beads.config", function()
       assert.equals("ready", config.get().keymaps.menus.z)
       assert.is_nil(config.get().keymaps.menus.l)
     end)
+
+    it("default action is nil unless set, and passes through when given", function()
+      config.setup({ keymaps = true })
+      assert.is_nil(config.get().keymaps.default)
+
+      config.setup({ keymaps = { default = "board" } })
+      assert.equals("board", config.get().keymaps.default)
+      assert.equals("browse", config.get().keymaps.menus.l) -- default menus survive
+    end)
   end)
 
   describe("merge", function()

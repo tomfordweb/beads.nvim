@@ -10,19 +10,11 @@ sidebar, and the dependency graph](assets/demo.gif)
 
 ## How it works
 
-beads.nvim is a front end for the `bd` CLI; `bd` is the single source of truth,
-and the plugin keeps no issue state of its own. Reads go through `bd … --json`
-and writes through `bd update`, `bd comment`, and the like, so every change you
-make in the UI is an ordinary `bd` mutation you could have run by hand. Calls
-run asynchronously through `vim.system`, and each view fetches once and filters
-in memory instead of shelling out per keystroke. The detail view takes this one
-step further: it is the issue's description as a real buffer, and `:w` writes it
-back with `bd update --body-file -`.
-
-State, history, and sync are bd's concern, not the plugin's. Issues live in a
-local Dolt database and sync over `refs/dolt/data` on your git remote; see bd's
-[sync model](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
-for the details beads.nvim deliberately does not reimplement.
+beads.nvim is a front end for the `bd` CLI: `bd` stays the single source of
+truth and the plugin keeps no issue state of its own, so every change you make
+in the UI is an ordinary `bd` mutation. State, history, and sync stay bd's
+concern — see bd's
+[sync model](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md).
 
 ## Examples
 
@@ -70,6 +62,8 @@ filter.
 
 ### Issues as a kanban board
 
+![Moving a card to another status column on the :BeadsBoard kanban board](assets/usage/board.gif)
+
 `:BeadsBoard` lays every issue out as status columns — open, in progress,
 blocked, and closed by default (configurable). `h`/`l` move between columns,
 `j`/`k` within one, `<CR>` opens the detail view, and `s` moves a card to
@@ -84,71 +78,47 @@ the all-issues view, and `gd` follows any id straight to its issue.
 
 ## Features
 
-- **Issue browser** — Telescope picker over `bd list` with live filter
-  cycling (status / priority / type / label / include-closed) and a rendered
-  issue preview. No subprocess per keystroke: one fetch, client-side
-  filtering. `<C-f>` defers/undefers the selected issue.
-- **Ready view** — `bd ready` (open issues with no active blockers).
-- **Editable detail view** — the detail float IS the issue's description as a
-  real, always-editable buffer: every vim (and user) keybind works — `a`
-  appends, `o` opens a line, `q` records macros. `:w` persists via
-  `bd update --body-file -`, `:q`/`:wq`/`ZZ` save and close. Optional autosave
-  and persistent undo (see `edit` config). Set
-  `view = { editable_description = false }` for the legacy read-only detail
-  view with single-key actions and the `e` edit submode.
-- **Issue sidebar** — companion pane beside the detail view: overview
-  (status/priority/assignee/labels/dates), an **Actions** section (change
-  status/priority, comment, labels, assign, defer/undefer, close/reopen,
-  graph, history — run a row with `<CR>`, or press its single key — `s`, `p`,
-  `a`, `L`, `A`, `f`, `c`/`o`, `D`, `H` — while the sidebar is focused), plus
-  parent, children, depends_on, blocks, comments, and recent history, every
-  id jumpable (`gd` / `<CR>`, `<BS>` history). `<Tab>` switches panes, `gs`
-  toggles it.
-- **Labels** — the `labels` action adds or removes labels (pick an existing
-  one or type a new); `<C-l>` filters the browser by label.
-- **Epic children** — epics list their children in the sidebar (every child
-  id jumpable); `:BeadsPalette` → `epic status` shows completion per epic.
-- **Change history** — the `history` action shows the issue's tracked-field
-  transitions (status/priority/assignee/title/type/description) in a float;
-  the last few changes render inline in the sidebar.
-- **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
-  `:BeadsQuick` quick capture wrapping `bd q`.
-- **Command palette** — `:BeadsPalette` runs repo-level commands
-  (`status`, `epic status`, `ready`, `blocked`, `stale`, `lint`, `preflight`,
-  `doctor`, `find-duplicates`, `orphans`, `dep cycles`, `diff`, `init`, …)
-  with output in a float.
-- **Help bar** — every pane shows its keybinds: floats render them in the
-  window footer, the picker in its prompt title.
-- **Resize-aware floats** — view/edit/palette floats re-center when the
-  terminal size changes (tmux pane resize or zoom).
-- **Link styling** — jumpable dependency ids render underlined
-  (`BeadsLink`, default-linked to `Underlined`).
-- **Comments** — issue comments render in the sidebar; the `comment` action
-  (`a` while the sidebar is focused) adds one (`bd comment --stdin`).
-- **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
-  shows `bd graph <id> --compact` in a float; ids are links, `gd` opens
-  them. `a` toggles between the single-issue graph and the all-issues
-  graph (`bd graph --all --compact`). The `<leader>bd`-menu `g` entry opens
-  the all-issues graph directly (no id needed); set `graph.scope = "all"`
-  to default the float to all-issues.
+The headline flows are shown above; here is the full set, top to niche.
+
+- **Issue browser** (`:Beads`) — Telescope picker over `bd list` with live
+  filter cycling (status / priority / type / label / closed) and a rendered
+  preview. One fetch, client-side filtering — no subprocess per keystroke.
+- **Editable detail view** — the detail float *is* the issue description as a
+  real, always-editable buffer; `:w` persists via `bd update`. Optional
+  autosave and persistent undo. (`editable_description = false` restores the
+  legacy read-only view with single-key actions.)
+- **Issue sidebar** — companion pane: overview, an **Actions** section
+  (status, priority, comment, labels, assign, defer, close/reopen, graph,
+  history — each a single key), plus parent / children / depends_on / blocks /
+  comments / history, every id jumpable. `<Tab>` switches panes, `gs` toggles.
+- **Create** — `:BeadsCreate` interactive form (title / type / priority /
+  deps) or `:BeadsQuick` one-line capture.
+- **Dependency graph** — `:BeadsGraph [id]` (or `D` in the detail view) shows
+  `bd graph --compact`; ids are links, `gd` follows them, `a` toggles single-
+  issue ↔ all-issues.
+- **Home dashboard** — `:BeadsDashboard` shows status counts, ready, and total
+  from `bd stats`; each row jumps into that filter.
+- **Kanban board** — `:BeadsBoard` groups every issue into status columns;
+  `h`/`l` switch columns, `<CR>` opens detail, `s` moves a card.
+- **Command palette** — `:BeadsPalette` runs repo-level commands (`status`,
+  `epic status`, `ready`, `blocked`, `stale`, `lint`, `doctor`,
+  `find-duplicates`, `orphans`, `dep cycles`, …) with output in a float.
 - **Live search** — `:BeadsSearch` re-queries `bd search` per keystroke,
-  covering description text the cached picker can't; `<C-a>` includes
-  closed issues.
+  covering description text the cached picker can't; `<C-a>` includes closed.
 - **Memories** — `:BeadsMemories` browses the bd memory store; `<CR>` edits
-  in a float (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
-- **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
-  project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
-  to jump into that status filter, `r` for ready, `q` to close.
-- **Kanban board** — `:BeadsBoard` (or the `<leader>bd` menu `k`) groups every
-  issue into status columns; `h`/`l` switch columns, `<CR>` opens detail, and
-  `s` moves a card to another status.
-- **Wisps** — `:BeadsWisps` (or the `<leader>bd` menu `w`) lists bd's ephemeral
-  agent-runtime issues grouped by type; `p` promotes one to a permanent bead
-  (`bd promote`). Niche — most users never need it.
-- **Formulas / molecules** — `:BeadsFormulas` (or the `<leader>bd` menu `f`)
-  lists bd's workflow formulas; pick one to show its structure or pour it into a
-  persistent molecule (`bd mol pour`, with `--var` substitutions). `mol current`
-  / `mol progress` are also in the command palette.
+  (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
+- **Change history** — the `history` action shows an issue's tracked-field
+  transitions; the last few render inline in the sidebar.
+- **Labels** — the `labels` action adds/removes labels; `<C-l>` filters the
+  browser by label.
+- **Formulas / molecules** — `:BeadsFormulas` lists bd's workflow formulas;
+  pick one to show its structure or pour it into a molecule (`bd mol pour`).
+- **Wisps** — `:BeadsWisps` lists bd's ephemeral agent-runtime issues; `p`
+  promotes one to a permanent bead. Niche — most users never need it.
+
+Plus: a **ready view** (`:BeadsReady`), **epic children** in the sidebar,
+inline **comments**, per-pane **help bars**, **resize-aware floats** (re-center
+on tmux resize / zoom), and underlined **link styling** for jumpable ids.
 
 ## Requirements
 
@@ -469,6 +439,24 @@ keymaps = {
 Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
 `closed`, `ready`, `create`, `quick`, `palette`, `memories`, `search`,
 `graph`, `dashboard`, `board`, `wisps`, `formulas`.
+
+#### Default action on the bare prefix
+
+`keymaps.default` binds the `base` prefix *itself* to one action (any builtin
+name, a function, or `{ desc, fn }` — the same values `menus` takes), so the
+prefix alone does something useful instead of waiting for a menu key:
+
+```lua
+keymaps = {
+  base = "<leader>bd",
+  default = "board",   -- <leader>bd alone opens the kanban board
+  -- menus = { … }      -- <leader>bd + key still works alongside it
+}
+```
+
+Left unset (the default), the bare prefix stays unbound. When both `default`
+and `menus` are present under the same prefix, Neovim waits `timeoutlen` after
+the prefix to disambiguate before firing the default.
 
 ## Usage
 

@@ -6,7 +6,7 @@
 --   nvim -u /work/recording/init.lua        (cwd = the seeded demo dir)
 --
 -- Mirrors tests/minimal_init.lua's rtp wiring; deliberately separate from the
--- gitignored notes/scripts/capture-init.lua (that drives the interactive
+-- gitignored docs-internal/notes/scripts/capture-init.lua (that drives the interactive
 -- tmux+asciinema harness — this one is the committed, headless path).
 
 vim.opt.rtp:prepend("/work")
