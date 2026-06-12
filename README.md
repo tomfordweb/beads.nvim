@@ -8,80 +8,23 @@ editor.
 ![beads.nvim — the Telescope issue browser, the editable detail view with its
 sidebar, and the dependency graph](assets/demo.gif)
 
-## Quickstart
+## How it works
 
-1. Install [`bd`](https://github.com/gastownhall/beads) and confirm it is on
-   your `$PATH` (`bd version` — tested against 1.0.4).
-2. Install the plugin with your package manager — see
-   [Installation](#installation) for lazy.nvim, packer, vim-plug, and
-   mini.deps. It needs telescope + plenary, then `require("beads").setup()` and
-   the Telescope extension.
-3. Open Neovim in a repo with a `.beads` store (or run `:BeadsPalette` →
-   `init`), then `:Beads` to browse — `<CR>` opens an issue, `<Tab>` toggles
-   its sidebar, `gd` follows a dependency.
+beads.nvim is a front end for the `bd` CLI; `bd` is the single source of truth,
+and the plugin keeps no issue state of its own. Reads go through `bd … --json`
+and writes through `bd update`, `bd comment`, and the like, so every change you
+make in the UI is an ordinary `bd` mutation you could have run by hand. Calls
+run asynchronously through `vim.system`, and each view fetches once and filters
+in memory instead of shelling out per keystroke. The detail view takes this one
+step further: it is the issue's description as a real buffer, and `:w` writes it
+back with `bd update --body-file -`.
 
-> Needs Neovim ≥ 0.10. Full [requirements](#requirements),
-> [configuration](#configuration), and [keymaps](#keymaps) are below.
+State, history, and sync are bd's concern, not the plugin's. Issues live in a
+local Dolt database and sync over `refs/dolt/data` on your git remote; see bd's
+[sync model](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
+for the details beads.nvim deliberately does not reimplement.
 
-## Features
-
-- **Issue browser** — Telescope picker over `bd list` with live filter
-  cycling (status / priority / type / label / include-closed) and a rendered
-  issue preview. No subprocess per keystroke: one fetch, client-side
-  filtering. `<C-f>` defers/undefers the selected issue.
-- **Ready view** — `bd ready` (open issues with no active blockers).
-- **Editable detail view** — the detail float IS the issue's description as a
-  real, always-editable buffer: every vim (and user) keybind works — `a`
-  appends, `o` opens a line, `q` records macros. `:w` persists via
-  `bd update --body-file -`, `:q`/`:wq`/`ZZ` save and close. Optional autosave
-  and persistent undo (see `edit` config). Set
-  `view = { editable_description = false }` for the legacy read-only detail
-  view with single-key actions and the `e` edit submode.
-- **Issue sidebar** — companion pane beside the detail view: overview
-  (status/priority/assignee/labels/dates), an **Actions** section (change
-  status/priority, comment, labels, assign, defer/undefer, close/reopen,
-  graph, history — run a row with `<CR>`, or press its single key — `s`, `p`,
-  `a`, `L`, `A`, `f`, `c`/`o`, `D`, `H` — while the sidebar is focused), plus
-  parent, children, depends-on, blocks, comments, and recent history, every
-  id jumpable (`gd` / `<CR>`, `<BS>` history). `<Tab>` switches panes, `gs`
-  toggles it.
-- **Labels** — the `labels` action adds or removes labels (pick an existing
-  one or type a new); `<C-l>` filters the browser by label.
-- **Epic children** — epics list their children in the sidebar (every child
-  id jumpable); `:BeadsPalette` → `epic status` shows completion per epic.
-- **Change history** — the `history` action shows the issue's tracked-field
-  transitions (status/priority/assignee/title/type/description) in a float;
-  the last few changes render inline in the sidebar.
-- **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
-  `:BeadsQuick` quick capture wrapping `bd q`.
-- **Command palette** — `:BeadsPalette` runs repo-level commands
-  (`status`, `epic status`, `ready`, `blocked`, `stale`, `lint`, `preflight`,
-  `doctor`, `find-duplicates`, `orphans`, `dep cycles`, `diff`, `init`, …)
-  with output in a float.
-- **Help bar** — every pane shows its keybinds: floats render them in the
-  window footer, the picker in its prompt title.
-- **Resize-aware floats** — view/edit/palette floats re-center when the
-  terminal size changes (tmux pane resize or zoom).
-- **Link styling** — jumpable dependency ids render underlined
-  (`BeadsLink`, default-linked to `Underlined`).
-- **Comments** — issue comments render in the sidebar; the `comment` action
-  (`a` while the sidebar is focused) adds one (`bd comment --stdin`).
-- **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
-  shows `bd graph <id> --compact` in a float; ids are links, `gd` opens
-  them. `a` toggles between the single-issue graph and the all-issues
-  graph (`bd graph --all --compact`). The `<leader>bd`-menu `g` entry opens
-  the all-issues graph directly (no id needed); set `graph.scope = "all"`
-  to default the float to all-issues.
-- **Live search** — `:BeadsSearch` re-queries `bd search` per keystroke,
-  covering description text the cached picker can't; `<C-a>` includes
-  closed issues.
-- **Memories** — `:BeadsMemories` browses the bd memory store; `<CR>` edits
-  in a float (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
-- **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
-  project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
-  to jump into that status filter, `r` for ready, `q` to close.
-
-## Walkthroughs
+## Examples
 
 Short clips of the common flows (synthetic demo data — no personal tracking on
 screen). Each is rendered headlessly by the `recording/` pipeline.
@@ -132,6 +75,64 @@ filter.
 From the sidebar, `D` opens the dependency graph for the issue; `a` toggles to
 the all-issues view, and `gd` follows any id straight to its issue.
 
+## Features
+
+- **Issue browser** — Telescope picker over `bd list` with live filter
+  cycling (status / priority / type / label / include-closed) and a rendered
+  issue preview. No subprocess per keystroke: one fetch, client-side
+  filtering. `<C-f>` defers/undefers the selected issue.
+- **Ready view** — `bd ready` (open issues with no active blockers).
+- **Editable detail view** — the detail float IS the issue's description as a
+  real, always-editable buffer: every vim (and user) keybind works — `a`
+  appends, `o` opens a line, `q` records macros. `:w` persists via
+  `bd update --body-file -`, `:q`/`:wq`/`ZZ` save and close. Optional autosave
+  and persistent undo (see `edit` config). Set
+  `view = { editable_description = false }` for the legacy read-only detail
+  view with single-key actions and the `e` edit submode.
+- **Issue sidebar** — companion pane beside the detail view: overview
+  (status/priority/assignee/labels/dates), an **Actions** section (change
+  status/priority, comment, labels, assign, defer/undefer, close/reopen,
+  graph, history — run a row with `<CR>`, or press its single key — `s`, `p`,
+  `a`, `L`, `A`, `f`, `c`/`o`, `D`, `H` — while the sidebar is focused), plus
+  parent, children, depends_on, blocks, comments, and recent history, every
+  id jumpable (`gd` / `<CR>`, `<BS>` history). `<Tab>` switches panes, `gs`
+  toggles it.
+- **Labels** — the `labels` action adds or removes labels (pick an existing
+  one or type a new); `<C-l>` filters the browser by label.
+- **Epic children** — epics list their children in the sidebar (every child
+  id jumpable); `:BeadsPalette` → `epic status` shows completion per epic.
+- **Change history** — the `history` action shows the issue's tracked-field
+  transitions (status/priority/assignee/title/type/description) in a float;
+  the last few changes render inline in the sidebar.
+- **Create** — `:BeadsCreate` interactive form (title/type/priority/deps) or
+  `:BeadsQuick` quick capture wrapping `bd q`.
+- **Command palette** — `:BeadsPalette` runs repo-level commands
+  (`status`, `epic status`, `ready`, `blocked`, `stale`, `lint`, `preflight`,
+  `doctor`, `find-duplicates`, `orphans`, `dep cycles`, `diff`, `init`, …)
+  with output in a float.
+- **Help bar** — every pane shows its keybinds: floats render them in the
+  window footer, the picker in its prompt title.
+- **Resize-aware floats** — view/edit/palette floats re-center when the
+  terminal size changes (tmux pane resize or zoom).
+- **Link styling** — jumpable dependency ids render underlined
+  (`BeadsLink`, default-linked to `Underlined`).
+- **Comments** — issue comments render in the sidebar; the `comment` action
+  (`a` while the sidebar is focused) adds one (`bd comment --stdin`).
+- **Dependency graph** — `D` in the detail view (or `:BeadsGraph [id]`)
+  shows `bd graph <id> --compact` in a float; ids are links, `gd` opens
+  them. `a` toggles between the single-issue graph and the all-issues
+  graph (`bd graph --all --compact`). The `<leader>bd`-menu `g` entry opens
+  the all-issues graph directly (no id needed); set `graph.scope = "all"`
+  to default the float to all-issues.
+- **Live search** — `:BeadsSearch` re-queries `bd search` per keystroke,
+  covering description text the cached picker can't; `<C-a>` includes
+  closed issues.
+- **Memories** — `:BeadsMemories` browses the bd memory store; `<CR>` edits
+  in a float (`:w` → `bd remember`), `<C-n>` creates, `<C-d>` forgets.
+- **Home dashboard** — `:BeadsDashboard` (or the `<leader>bd` menu `h`) shows
+  project status counts, ready, and total from `bd stats`; press `o`/`i`/`b`/`d`
+  to jump into that status filter, `r` for ready, `q` to close.
+
 ## Requirements
 
 - Neovim ≥ 0.10 (`vim.system`)
@@ -146,9 +147,11 @@ the all-issues view, and `gd` follows any id straight to its issue.
 
 ## Installation
 
-Every snippet does the same three things: put the plugin on the runtimepath
-with its telescope + plenary dependencies, call `require("beads").setup()`, and
-load the Telescope extension. Pick your package manager.
+First install [`bd`](https://github.com/gastownhall/beads) and confirm it is on
+your `$PATH` (`bd version` — tested against 1.0.4). Then add the plugin with your
+package manager. Every snippet does the same three things: put the plugin on the
+runtimepath with its telescope + plenary dependencies, call
+`require("beads").setup()`, and load the Telescope extension.
 
 ### lazy.nvim
 
@@ -215,7 +218,9 @@ require("telescope").load_extension("beads")
 ```
 
 After installing, run `:checkhealth beads` to verify `bd` and the dependencies
-are wired up.
+are wired up. Then open Neovim in a repo with a `.beads` store (or run
+`:BeadsPalette` → `init`) and run `:Beads` to browse — `<CR>` opens an issue,
+`<Tab>` toggles its sidebar, `gd` follows a dependency.
 
 ## Configuration
 
@@ -304,8 +309,8 @@ require("beads").setup({
     -- section order; remove entries to hide them. "actions" holds the
     -- runnable action rows; "comments" the thread; "history" surfaces the
     -- last `history_limit` change rows inline (full log on the history action).
-    sections = { "overview", "actions", "parent", "children", "depends_on",
-                 "blocks", "comments", "history" },
+    sections = { "overview", "parent", "children", "depends_on", "blocks",
+                 "comments", "history", "actions" },
     history_limit = 3,
   },
 
@@ -373,7 +378,7 @@ override one explicitly use
 
 ```lua
 vim.api.nvim_create_autocmd("User", {
-  pattern = "BeadsIssueUpdated", -- data = { id, action = "create"|"status"|"priority"|"close"|"reopen"|"comment"|"update" }
+  pattern = "BeadsIssueUpdated", -- data = { id, action = "create"|"update"|"status"|"priority"|"assign"|"label"|"defer"|"undefer"|"close"|"reopen"|"comment" }
   callback = function(ev) ... end,
 })
 -- also: BeadsMemoryUpdated — data = { key, action = "remember"|"forget" }
@@ -446,7 +451,7 @@ Builtin actions: `browse`, `all`, `open`, `in_progress`, `blocked`,
 ## Usage
 
 Commands: `:Beads`, `:BeadsReady`, `:BeadsShow <id>`, `:BeadsCreate`,
-`:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`,
+`:BeadsQuick [title]`, `:BeadsPalette`, `:BeadsMemories`, `:BeadsDashboard`,
 `:BeadsSearch [text]`, `:BeadsGraph [id]`. Also `:Telescope beads
 beads|ready|search|memories`.
 
