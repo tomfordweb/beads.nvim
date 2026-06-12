@@ -5,6 +5,8 @@ dependency-first issue tracker. Browse and filter issues in Telescope, edit
 them in a floating detail view, and walk dependency chains without leaving the
 editor.
 
+📖 **[Documentation](https://beads.tomfordweb.com)** — https://beads.tomfordweb.com
+
 ![beads.nvim — the Telescope issue browser, the editable detail view with its
 sidebar, and the dependency graph](assets/demo.gif)
 
