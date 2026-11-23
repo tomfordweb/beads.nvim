@@ -76,8 +76,8 @@ describe("beads.events", function()
       "--since",
       "0",
       "--follow",
-      "--exit-on-stdin-eof",
       "--json",
+      "--exit-on-stdin-eof",
     }, spawned[1].argv)
     assert.is_true(spawned[1].sys_opts.stdin)
     assert.equals("/tmp/ws", spawned[1].sys_opts.cwd)
@@ -125,7 +125,30 @@ describe("beads.events", function()
     drain()
     assert.is_false(events.is_running())
     events.ensure()
-    assert.equals(1, #spawned) -- no retry in this workspace
+    assert.equals(1, #spawned) -- no immediate retry in this workspace
+    assert.truthy(events.reason():find("unknown command", 1, true))
+  end)
+
+  it("drops --exit-on-stdin-eof when bd does not know it (1.3.x)", function()
+    events.ensure()
+    spawned[1].sys_opts.stderr(nil, "Error: unknown flag: --exit-on-stdin-eof\n")
+    spawned[1].on_exit({ code = 1 })
+    drain()
+    assert.equals(2, #spawned)
+    assert.same({ "bd", "events", "tail", "--since", "0", "--follow", "--json" }, spawned[2].argv)
+    assert.is_true(events.is_running())
+  end)
+
+  it("stops an idle follower when the journal is disabled", function()
+    events.ensure()
+    spawned[1].sys_opts.stderr(
+      nil,
+      "note: the events journal is disabled for this workspace (enable with ...)\n"
+    )
+    drain()
+    assert.is_true(spawned[1].killed)
+    assert.is_false(events.is_running())
+    assert.truthy(events.reason():find("disabled", 1, true))
   end)
 
   it("resumes from head and rebuilds after a truncation error", function()

@@ -103,7 +103,7 @@ end
 --- started with `--exit-on-stdin-eof` never outlives the editor. Callbacks run
 --- in a fast context: schedule before touching the API.
 ---@param args string[]
----@param handlers { on_stdout: fun(data: string), on_exit: fun(out: { code: integer, stderr: string|nil }), cwd: string|nil }
+---@param handlers { on_stdout: fun(data: string), on_stderr: fun(data: string)|nil, on_exit: fun(out: { code: integer, stderr: string|nil }), cwd: string|nil }
 ---@return { kill: fun(self: table, signal: integer|string) }|nil handle
 function M.spawn_stream(args, handlers)
   local sys_opts = {
@@ -116,6 +116,13 @@ function M.spawn_stream(args, handlers)
       end
     end,
   }
+  if handlers.on_stderr then
+    sys_opts.stderr = function(_, data)
+      if data then
+        handlers.on_stderr(data)
+      end
+    end
+  end
   local ok, handle = pcall(runner(), argv_for(args), sys_opts, handlers.on_exit)
   if not ok then
     -- vim.system throws when the binary is missing (ENOENT)

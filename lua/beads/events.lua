@@ -18,6 +18,11 @@ local M = {}
 
 local MAX_RESTARTS = 3
 local RESTART_DELAY_MS = 2000
+-- how long a workspace that refused the journal is left alone before the next
+-- view open tries again (so enabling the journal needs no Neovim restart)
+local RETRY_MS = 30000
+local STDERR_KEEP = 4096
+local EOF_FLAG = "--exit-on-stdin-eof"
 
 local state = {
   handle = nil, -- running follower
@@ -26,13 +31,15 @@ local state = {
   seq = 0, -- highest journal seq seen (the checkpoint)
   seq_resumed = false, -- following from a checkpoint: nothing is a replay
   buf = "", -- partial stdout line carried between chunks
+  err = "", -- tail of the follower's stderr
+  stdin_eof = true, -- bd accepts --exit-on-stdin-eof (newer than 1.3.x)
   got_output = false, -- follower produced at least one record
   started_at = nil, -- UTC second the first follower started, for replay detection
   pending = {}, -- live records waiting for the debounce
   timer = nil,
   restarts = 0,
   truncated_head = nil, -- head reported by a truncation error
-  unsupported = {}, -- cwd -> true once bd refused the journal there
+  unsupported = {}, -- cwd -> { at, reason } once bd refused the journal there
 }
 
 local function opts()
@@ -137,12 +144,32 @@ end
 
 local start
 
+--- Stop following this workspace for a while; `reason` is shown by
+--- :checkhealth.
+---@param reason string
+local function give_up(reason)
+  state.unsupported[state.cwd] = { at = vim.uv.now(), reason = reason }
+  util.debug("events: " .. reason)
+  M.stop()
+end
+
+---@param data string
+local function handle_stderr(data)
+  state.err = (state.err .. data):sub(-STDERR_KEEP)
+  -- with the journal off, `--follow` prints a note and then idles forever
+  if state.err:find("events journal is disabled", 1, true) then
+    give_up("events journal is disabled (bd config set events-journal true)")
+  end
+end
+
 ---@param out { code: integer, stderr: string|nil }
 local function handle_exit(out)
   state.handle = nil
   handle_line(state.buf)
   state.buf = ""
-  for line in (out.stderr or ""):gmatch("[^\n]+") do
+  local err = state.err .. (out.stderr or "")
+  state.err = ""
+  for line in err:gmatch("[^\n]+") do
     if line:find("events_journal_truncated", 1, true) then
       handle_line(line)
     end
@@ -158,13 +185,17 @@ local function handle_exit(out)
     return
   end
 
+  if state.stdin_eof and err:find("unknown flag: " .. EOF_FLAG, 1, true) then
+    -- bd 1.3.x has the journal but not this flag; M.stop on VimLeavePre
+    -- covers it instead
+    state.stdin_eof = false
+    start(state.cwd)
+    return
+  end
+
   if not state.got_output and out.code ~= 0 then
-    -- bd older than 1.3.0 (unknown command) or the journal is off here:
-    -- stay quiet and do not retry in this workspace
-    state.unsupported[state.cwd] = true
-    util.debug(
-      ("events: follower unavailable (exit %d): %s"):format(out.code, vim.trim(out.stderr or ""))
-    )
+    -- bd older than 1.3.0 has no `events` command: stay quiet
+    give_up(("bd events unavailable (exit %d): %s"):format(out.code, vim.trim(err)))
     return
   end
 
@@ -187,18 +218,21 @@ start = function(cwd)
   state.gen = state.gen + 1
   local gen = state.gen
   state.cwd = cwd
-  state.buf = ""
+  state.buf, state.err = "", ""
   state.started_at = state.started_at or os.date("!%Y-%m-%dT%H:%M:%S")
-  state.handle = cli.spawn_stream({
-    "events",
-    "tail",
-    "--since",
-    tostring(state.seq),
-    "--follow",
-    "--exit-on-stdin-eof",
-    "--json",
-  }, {
+  local args = { "events", "tail", "--since", tostring(state.seq), "--follow", "--json" }
+  if state.stdin_eof then
+    table.insert(args, EOF_FLAG)
+  end
+  state.handle = cli.spawn_stream(args, {
     cwd = cwd,
+    on_stderr = function(data)
+      vim.schedule(function()
+        if gen == state.gen then
+          handle_stderr(data)
+        end
+      end)
+    end,
     on_stdout = function(data)
       vim.schedule(function()
         if gen == state.gen then
@@ -236,9 +270,14 @@ function M.ensure()
     return
   end
   local cwd = cli.resolve_cwd()
-  if state.unsupported[cwd] or (state.handle and state.cwd == cwd) then
+  if state.handle and state.cwd == cwd then
     return
   end
+  local refused = state.unsupported[cwd]
+  if refused and vim.uv.now() - refused.at < RETRY_MS then
+    return
+  end
+  state.unsupported[cwd] = nil
   -- first start, or the workspace changed: each clone has its own sequence
   M.stop()
   state.seq, state.seq_resumed, state.started_at = 0, false, nil
@@ -255,12 +294,19 @@ function M.is_running()
   return state.handle ~= nil
 end
 
+--- Why the follower is not running in the current workspace, if bd refused.
+---@return string|nil
+function M.reason()
+  local refused = state.unsupported[cli.resolve_cwd()]
+  return refused and refused.reason or nil
+end
+
 --- Test helper: drop every piece of follower state.
 function M._reset()
   M.stop()
   state.cwd, state.seq, state.seq_resumed, state.started_at = nil, 0, false, nil
   state.got_output, state.restarts, state.truncated_head = false, 0, nil
-  state.buf, state.unsupported = "", {}
+  state.buf, state.err, state.unsupported, state.stdin_eof = "", "", {}, true
 end
 
 M._state = state

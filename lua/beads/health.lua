@@ -45,12 +45,18 @@ function M.check()
   if events_cfg.enabled then
     local events = require("beads.events")
     events.ensure()
+    -- give bd a moment to refuse (old bd, or the journal is off)
+    vim.wait(1500, function()
+      return events.reason() ~= nil
+    end, 50)
     if events.is_running() then
       health.ok("events journal follower running (live refresh)")
     else
-      health.warn("events.enabled is set but the journal follower is not running", {
-        "Needs bd >= 1.3.0 and `bd config set events-journal true` in the workspace",
-      })
+      health.warn(
+        "events.enabled is set but the journal follower is not running: "
+          .. (events.reason() or "unknown reason"),
+        { "Needs bd >= 1.3.0 and `bd config set events-journal true` in the workspace" }
+      )
     end
   else
     health.info("live refresh off (set `events.enabled = true`; needs bd >= 1.3.0)")
