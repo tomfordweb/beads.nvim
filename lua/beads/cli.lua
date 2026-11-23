@@ -98,6 +98,40 @@ function M.run_stdin(args, input, cb)
   run(args, input, false, nil, cb)
 end
 
+--- Start a long-lived bd process and stream its stdout (e.g. `bd events tail
+--- --follow`). stdin is a pipe that closes when Neovim exits, so a follower
+--- started with `--exit-on-stdin-eof` never outlives the editor. Callbacks run
+--- in a fast context: schedule before touching the API.
+---@param args string[]
+---@param handlers { on_stdout: fun(data: string), on_stderr: fun(data: string)|nil, on_exit: fun(out: { code: integer, stderr: string|nil }), cwd: string|nil }
+---@return { kill: fun(self: table, signal: integer|string) }|nil handle
+function M.spawn_stream(args, handlers)
+  local sys_opts = {
+    cwd = handlers.cwd or M.resolve_cwd(),
+    text = true,
+    stdin = true,
+    stdout = function(_, data)
+      if data then
+        handlers.on_stdout(data)
+      end
+    end,
+  }
+  if handlers.on_stderr then
+    sys_opts.stderr = function(_, data)
+      if data then
+        handlers.on_stderr(data)
+      end
+    end
+  end
+  local ok, handle = pcall(runner(), argv_for(args), sys_opts, handlers.on_exit)
+  if not ok then
+    -- vim.system throws when the binary is missing (ENOENT)
+    handlers.on_exit({ code = 127, stderr = tostring(handle) })
+    return nil
+  end
+  return handle
+end
+
 --- Synchronous variant for tests and simple scripts. Bounded by
 --- `sync_timeout_ms` so a hung bd (e.g. a Dolt lock) can never freeze the
 --- editor indefinitely — :wait(timeout) kills the process on expiry.

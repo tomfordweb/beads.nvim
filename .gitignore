@@ -3,6 +3,8 @@
 .dolt/
 *.db
 .beads-credential-key
+# bd >= 1.3 migration gate lock (runtime, per-machine)
+.beads.gate.lock
 
 # Live beads working data — never publish personal tracking.
 # Tests use synthetic fixtures under tests/fixtures/ instead.

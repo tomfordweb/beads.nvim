@@ -132,6 +132,7 @@ end
 --- Open the wisps browser.
 function M.open()
   render.define_highlights()
+  require("beads.events").ensure()
   M._fetch(function(list)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].buftype = "nofile"

@@ -737,6 +737,7 @@ end
 ---@param opts { on_close: fun()|nil }|nil on_close runs after the float closes
 function M.open(id, opts)
   render.define_highlights()
+  require("beads.events").ensure()
   issues.prefetch() -- warm statuses/types for the status action's vim.ui.select
   cli.run_json({ "show", id }, function(ok, result)
     if not ok or not result or not result[1] then
