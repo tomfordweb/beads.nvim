@@ -365,6 +365,7 @@ what you need.
       notify = true,            -- false: silence success messages (errors always shown)
       refresh_on_focus = true,  -- re-center floats on tmux reattach/zoom (focus events)
       debug = false,            -- log float resize/focus events via vim.notify(DEBUG)
+      events = { enabled = false, debounce_ms = 200 }, -- live refresh from the bd events journal
       palette = { extra = {} }, -- extra palette entries { label=..., args={...} }
     
       -- lifecycle hooks (errors are caught and surfaced via vim.notify)
@@ -432,6 +433,37 @@ EVENTS ~
     })
     -- also: BeadsMemoryUpdated — data = { key, action = "remember"|"forget" }
 <
+
+
+LIVE REFRESH ~
+
+With bd 1.3.0 or newer, open views can refresh on their own when another agent
+or terminal changes a bead. Turn the journal on in the workspace, then enable
+the follower:
+
+>bash
+    bd config set events-journal true
+<
+
+>lua
+    require("beads").setup({ events = { enabled = true } })
+<
+
+The first view you open starts one `bd events tail --follow` job for the
+workspace. New journal records refresh the detail view, board and wisps list
+(debounced by `events.debounce_ms`), and fire a `User` autocmd:
+
+>lua
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "BeadsEventsChanged", -- data = { events = <journal records>, seq = <highest seq> }
+      callback = function(ev) ... end,
+    })
+<
+
+Unsaved description edits are never overwritten. On older bd, or with the
+journal off, the follower exits quietly and the refresh key works as before.
+`bd dolt pull` is not journaled, so refresh by hand after a sync. `:checkhealth
+beads` reports whether the follower is running.
 
 
 TMUX ~

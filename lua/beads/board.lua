@@ -222,6 +222,7 @@ end
 --- Open (or refresh) the kanban board.
 function M.open()
   render.define_highlights()
+  require("beads.events").ensure()
   issues.prefetch() -- warm statuses for the `s` move-status select
   cli.run_json({ "list", "--all" }, function(ok, raw)
     if not ok or type(raw) ~= "table" then

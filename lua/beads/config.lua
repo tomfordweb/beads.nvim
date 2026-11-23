@@ -42,6 +42,7 @@
 ---@field notify boolean
 ---@field refresh_on_focus boolean
 ---@field debug boolean
+---@field events { enabled: boolean, debounce_ms: integer }
 ---@field palette { extra: table[] }
 ---@field hooks { on_open: fun(issue: table)|nil }
 ---@field runner fun(argv: string[], opts: table, on_exit: fun(out: table))|nil
@@ -214,6 +215,12 @@ local defaults = {
   -- `set -g focus-events on` for the focus events to reach nvim.
   refresh_on_focus = true,
   debug = false, -- log float resize/focus events via vim.notify(DEBUG)
+  -- Live refresh from the bd events journal (bd >= 1.3.0). Opt-in: needs
+  -- `bd config set events-journal true` in the workspace. When enabled, a
+  -- `bd events tail --follow` job refreshes open views as other agents or
+  -- terminals change beads. Silently inactive on older bd or with the journal
+  -- off. debounce_ms batches bursts of records into one refresh.
+  events = { enabled = false, debounce_ms = 200 },
   palette = { extra = {} },
   -- Lifecycle hooks. on_open(issue) fires once when the detail view first
   -- opens an id (not on internal refreshes); user errors are caught and
